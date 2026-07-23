@@ -10,6 +10,7 @@ use crate::state::AppState;
 
 pub async fn run(config: AppConfig) -> Result<()> {
     let postgres_pool = database::create_pool(&config.database.url).await?;
+    database::run_migrations(&postgres_pool).await?;
     let redis_client = cache::create_client(&config.redis.url).await?;
 
     let state = AppState {
