@@ -1,24 +1,36 @@
+pub mod database;
+pub mod redis;
+pub mod server;
+
 use anyhow::Result;
+
+use self::database::DatabaseConfig;
+use self::redis::RedisConfig;
+use self::server::ServerConfig;
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {
-    pub host: String,
-    pub port: u16,
+    pub server: ServerConfig,
+    pub database: DatabaseConfig,
+    pub redis: RedisConfig,
 }
 
 impl AppConfig {
     pub fn from_env() -> Result<Self> {
         dotenvy::dotenv().ok();
 
-        let host = std::env::var("BACKEND_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
-        let port = std::env::var("BACKEND_PORT")
-            .unwrap_or_else(|_| "8080".to_string())
-            .parse::<u16>()?;
+        let server = ServerConfig::from_env()?;
+        let database = DatabaseConfig::from_env()?;
+        let redis = RedisConfig::from_env()?;
 
-        Ok(Self { host, port })
+        Ok(Self {
+            server,
+            database,
+            redis,
+        })
     }
 
     pub fn address(&self) -> String {
-        format!("{}:{}", self.host, self.port)
+        self.server.address()
     }
 }

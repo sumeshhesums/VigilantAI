@@ -28,20 +28,49 @@ pub async fn health() -> Json<HealthResponse> {
 mod tests {
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
+    use sqlx::postgres::PgPoolOptions;
     use tower::ServiceExt;
 
     use crate::app;
     use crate::config::AppConfig;
+    use crate::config::database::DatabaseConfig;
+    use crate::config::redis::RedisConfig;
+    use crate::config::server::ServerConfig;
 
-    #[tokio::test]
-    async fn test_health_endpoint() {
-        let state = crate::state::AppState {
-            config: AppConfig {
+    fn test_state() -> crate::state::AppState {
+        let config = AppConfig {
+            server: ServerConfig {
                 host: "127.0.0.1".to_string(),
                 port: 0,
             },
+            database: DatabaseConfig {
+                url: "postgres://localhost:5432/test".to_string(),
+            },
+            redis: RedisConfig {
+                url: "redis://127.0.0.1:6379".to_string(),
+            },
         };
 
+        // connect_lazy creates a pool that does NOT connect until first query
+        let postgres_pool = PgPoolOptions::new()
+            .max_connections(1)
+            .connect_lazy(&config.database.url)
+            .expect("failed to create lazy pool");
+
+        // Client::open does NOT connect until first command
+        let redis_client = redis::Client::open(config.redis.url.clone())
+            .expect("failed to create redis client");
+
+        crate::state::AppState {
+            config,
+            postgres_pool,
+            redis_client,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_health_endpoint() {
+        let state = test_state();
         let app = app::router(state);
 
         let response = app

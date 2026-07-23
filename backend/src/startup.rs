@@ -3,12 +3,19 @@ use tokio::net::TcpListener;
 use tracing::info;
 
 use crate::app;
+use crate::cache;
 use crate::config::AppConfig;
+use crate::database;
 use crate::state::AppState;
 
 pub async fn run(config: AppConfig) -> Result<()> {
+    let postgres_pool = database::create_pool(&config.database.url).await?;
+    let redis_client = cache::create_client(&config.redis.url).await?;
+
     let state = AppState {
         config: config.clone(),
+        postgres_pool,
+        redis_client,
     };
 
     let app = app::router(state);
