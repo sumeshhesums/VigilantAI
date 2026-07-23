@@ -13,7 +13,10 @@ impl IntoResponse for AppError {
         let (status, message) = match &self {
             AppError::Internal(e) => {
                 tracing::error!(error = %e, "internal error");
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".to_string(),
+                )
             }
         };
 

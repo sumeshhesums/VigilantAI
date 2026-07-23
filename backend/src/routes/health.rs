@@ -32,10 +32,10 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::app;
-    use crate::config::AppConfig;
     use crate::config::database::DatabaseConfig;
     use crate::config::redis::RedisConfig;
     use crate::config::server::ServerConfig;
+    use crate::config::AppConfig;
 
     fn test_state() -> crate::state::AppState {
         let config = AppConfig {
@@ -58,8 +58,8 @@ mod tests {
             .expect("failed to create lazy pool");
 
         // Client::open does NOT connect until first command
-        let redis_client = redis::Client::open(config.redis.url.clone())
-            .expect("failed to create redis client");
+        let redis_client =
+            redis::Client::open(config.redis.url.clone()).expect("failed to create redis client");
 
         crate::state::AppState {
             config,

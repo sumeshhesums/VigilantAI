@@ -8,8 +8,7 @@ pub struct ServerConfig {
 
 impl ServerConfig {
     pub fn from_env() -> Result<Self> {
-        let host = std::env::var("BACKEND_HOST")
-            .unwrap_or_else(|_| "0.0.0.0".to_string());
+        let host = std::env::var("BACKEND_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
 
         let port = std::env::var("BACKEND_PORT")
             .context("BACKEND_PORT environment variable not set")?
