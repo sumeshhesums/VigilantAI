@@ -21,6 +21,10 @@ spec:
       labels:
         app.kubernetes.io/name: ai-service
         app.kubernetes.io/part-of: vigilantai
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/metrics"
     spec:
       securityContext:
         runAsUser: 1000

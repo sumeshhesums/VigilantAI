@@ -4,6 +4,7 @@ pub mod camera;
 pub mod evidence;
 pub mod health;
 pub mod incident;
+pub mod metrics;
 pub mod notification;
 pub mod user;
 
@@ -20,4 +21,5 @@ pub fn routes() -> Router<AppState> {
         .nest("/api/v1/evidence", evidence::routes())
         .nest("/api/v1/notifications", notification::routes())
         .nest("/api/v1", health::routes())
+        .route("/metrics", axum::routing::get(metrics::metrics))
 }

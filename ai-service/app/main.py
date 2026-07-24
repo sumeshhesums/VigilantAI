@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, inference, models
+from app.api import health, inference, metrics, models
 from app.config import Settings, get_settings
 from app.core.metrics import MetricsManager
 from app.core.model_manager import ModelManager
@@ -134,6 +134,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(inference.router)
     app.include_router(models.router)
+    app.include_router(metrics.router)
 
     return app
 

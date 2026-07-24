@@ -1,0 +1,57 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+rule_files:
+  - "alert.rules.yml"
+  - "recording.rules.yml"
+
+scrape_configs:
+  - job_name: "vigilantai-backend"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["backend:8080"]
+        labels:
+          service: "backend"
+          environment: "production"
+
+  - job_name: "vigilantai-camera-gateway"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["camera-gateway:8082"]
+        labels:
+          service: "camera-gateway"
+          environment: "production"
+
+  - job_name: "vigilantai-ai-service"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["ai-service:8081"]
+        labels:
+          service: "ai-service"
+          environment: "production"
+
+  - job_name: "vigilantai-dashboard"
+    metrics_path: "/api/metrics"
+    static_configs:
+      - targets: ["dashboard:3000"]
+        labels:
+          service: "dashboard"
+          environment: "production"
+
+  - job_name: "vigilantai-postgres"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+        labels:
+          service: "postgres"
+          environment: "production"
+
+  - job_name: "vigilantai-redis"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+        labels:
+          service: "redis"
+          environment: "production"

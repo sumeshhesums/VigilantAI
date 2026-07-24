@@ -21,6 +21,10 @@ spec:
       labels:
         app.kubernetes.io/name: backend
         app.kubernetes.io/part-of: vigilantai
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       securityContext:
         runAsUser: 1000

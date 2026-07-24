@@ -5,6 +5,7 @@ pub mod database;
 pub mod dto;
 pub mod errors;
 pub mod handlers;
+pub mod metrics;
 pub mod middleware;
 pub mod models;
 pub mod rbac;

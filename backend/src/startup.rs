@@ -6,6 +6,7 @@ use crate::app;
 use crate::cache;
 use crate::config::AppConfig;
 use crate::database;
+use crate::metrics::AppMetrics;
 use crate::security::Security;
 use crate::state::AppState;
 
@@ -14,12 +15,14 @@ pub async fn run(config: AppConfig) -> Result<()> {
     database::run_migrations(&postgres_pool).await?;
     let redis_client = cache::create_client(&config.redis.url).await?;
     let security = Security::from_config(&config.jwt)?;
+    let metrics = AppMetrics::new();
 
     let state = AppState {
         config: config.clone(),
         postgres_pool,
         redis_client,
         security,
+        metrics,
     };
 
     let app = app::router(state);

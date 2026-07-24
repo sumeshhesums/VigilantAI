@@ -1,0 +1,121 @@
+groups:
+  - name: vigilantai-alerts
+    rules:
+      # -- Service Availability --
+      - alert: BackendDown
+        expr: up{job="vigilantai-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend service is down"
+          description: "The VigilantAI backend has been unreachable for more than 1 minute."
+
+      - alert: AiServiceDown
+        expr: up{job="vigilantai-ai-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AI Service is down"
+          description: "The VigilantAI AI inference service has been unreachable for more than 1 minute."
+
+      - alert: GatewayDown
+        expr: up{job="vigilantai-camera-gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Camera Gateway is down"
+          description: "The VigilantAI camera gateway has been unreachable for more than 1 minute."
+
+      - alert: DashboardDown
+        expr: up{job="vigilantai-dashboard"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Dashboard is down"
+          description: "The VigilantAI dashboard has been unreachable for more than 2 minutes."
+
+      # -- Backend Latency --
+      - alert: HighBackendLatency
+        expr: histogram_quantile(0.95, rate(vigilantai_http_request_duration_seconds_bucket[5m])) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High backend latency"
+          description: "The 95th percentile request latency is above 2 seconds for 5 minutes."
+
+      # -- AI Inference Latency --
+      - alert: HighAiInferenceLatency
+        expr: histogram_quantile(0.95, rate(vigilantai_ai_inference_latency_seconds_bucket[5m])) > 5.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High AI inference latency"
+          description: "The 95th percentile AI inference latency is above 5 seconds for 5 minutes."
+
+      # -- Error Rate --
+      - alert: HighBackendErrorRate
+        expr: >
+          rate(vigilantai_http_requests_total{status=~"5.."}[5m])
+          / rate(vigilantai_http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High backend error rate"
+          description: "More than 5% of backend requests are returning 5xx errors."
+
+      - alert: HighAiFailureRate
+        expr: >
+          rate(vigilantai_ai_inference_failures_total[5m])
+          / rate(vigilantai_ai_inference_requests_total[5m]) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High AI inference failure rate"
+          description: "More than 10% of AI inference requests are failing."
+
+      # -- Camera Offline --
+      - alert: CamerasOffline
+        expr: vigilantai_gateway_cameras_offline > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cameras are offline"
+          description: "{{ $value }} camera(s) have been offline for more than 5 minutes."
+
+      # -- Database --
+      - alert: PostgresUnreachable
+        expr: up{job="vigilantai-postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is unreachable"
+          description: "The PostgreSQL database has been unreachable for more than 1 minute."
+
+      - alert: HighDbQueryLatency
+        expr: histogram_quantile(0.95, rate(vigilantai_db_query_duration_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database query latency"
+          description: "The 95th percentile database query latency is above 1 second."
+
+      # -- Redis --
+      - alert: RedisUnreachable
+        expr: up{job="vigilantai-redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is unreachable"
+          description: "The Redis cache has been unreachable for more than 1 minute."

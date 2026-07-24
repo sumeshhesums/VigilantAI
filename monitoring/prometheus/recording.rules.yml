@@ -1,0 +1,55 @@
+groups:
+  - name: vigilantai-recording
+    rules:
+      # -- Request Rate --
+      - record: vigilantai:http_requests:rate5m
+        expr: rate(vigilantai_http_requests_total[5m])
+
+      # -- Average Request Duration --
+      - record: vigilantai:http_request_duration:avg5m
+        expr: rate(vigilantai_http_request_duration_seconds_sum[5m])
+              / rate(vigilantai_http_request_duration_seconds_count[5m])
+
+      # -- P95 Request Duration --
+      - record: vigilantai:http_request_duration:p95_5m
+        expr: histogram_quantile(0.95, rate(vigilantai_http_request_duration_seconds_bucket[5m]))
+
+      # -- AI Inference Latency --
+      - record: vigilantai:ai_inference_latency:avg5m
+        expr: rate(vigilantai_ai_inference_latency_seconds_sum[5m])
+              / rate(vigilantai_ai_inference_latency_seconds_count[5m])
+
+      - record: vigilantai:ai_inference_latency:p95_5m
+        expr: histogram_quantile(0.95, rate(vigilantai_ai_inference_latency_seconds_bucket[5m]))
+
+      # -- Inference Rate --
+      - record: vigilantai:ai_inference_requests:rate5m
+        expr: rate(vigilantai_ai_inference_requests_total[5m])
+
+      # -- Incident Rate --
+      - record: vigilantai:incidents_created:rate5m
+        expr: rate(vigilantai_incidents_created_total[5m])
+
+      # -- Evidence Upload Rate --
+      - record: vigilantai:evidence_uploads:rate5m
+        expr: rate(vigilantai_evidence_uploads_total[5m])
+
+      # -- Notification Rate --
+      - record: vigilantai:notifications_sent:rate5m
+        expr: rate(vigilantai_notifications_sent_total[5m])
+
+      # -- Camera Availability --
+      - record: vigilantai:gateway_cameras_online:ratio
+        expr: >
+          vigilantai_gateway_cameras_online
+          / (vigilantai_gateway_cameras_online + vigilantai_gateway_cameras_offline)
+
+      # -- AI Failure Rate --
+      - record: vigilantai:ai_failure_rate:ratio5m
+        expr: >
+          rate(vigilantai_ai_inference_failures_total[5m])
+          / rate(vigilantai_ai_inference_requests_total[5m])
+
+      # -- Backend Publish Rate --
+      - record: vigilantai:backend_publishes:rate5m
+        expr: rate(vigilantai_gateway_backend_publishes_total[5m])
