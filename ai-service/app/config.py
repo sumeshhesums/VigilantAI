@@ -50,6 +50,19 @@ class Settings(BaseSettings):
         description="Maximum allowed pixel count",
     )
 
+    # Inference settings
+    CONFIDENCE_THRESHOLD: float = Field(
+        0.5, ge=0.0, le=1.0, description="Minimum detection confidence"
+    )
+    IOU_THRESHOLD: float = Field(0.45, ge=0.0, le=1.0, description="NMS IoU threshold")
+    MODEL_PATH: str = Field(
+        default="",
+        description="Custom model weights path (empty = use default)",
+    )
+    INFERENCE_TIMEOUT: float = Field(
+        10.0, gt=0, description="Inference timeout in seconds"
+    )
+
     # Request settings
     REQUEST_TIMEOUT: float = 30.0
 

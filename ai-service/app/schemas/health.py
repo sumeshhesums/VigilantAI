@@ -55,3 +55,8 @@ class DetailedHealthResponse(BaseModel):
     average_inference_time_ms: float = Field(
         ..., ge=0, description="Average inference time in ms"
     )
+    images_processed: int = Field(..., ge=0, description="Total images processed")
+    total_detections: int = Field(..., ge=0, description="Total detections returned")
+    average_detections_per_image: float = Field(
+        ..., ge=0, description="Average detections per image"
+    )

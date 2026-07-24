@@ -3,12 +3,13 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
-
 
 @pytest.fixture
-def client():
-    """Create test client with lifespan."""
+def client(monkeypatch):
+    """Create test client with lifespan (auto-load disabled)."""
+    monkeypatch.setenv("AI_SERVICE_AUTO_LOAD", "false")
+    from app.main import app
+
     with TestClient(app) as c:
         yield c
 
@@ -91,16 +92,16 @@ class TestModelsGetEndpoint:
 class TestModelsLoadEndpoint:
     """Tests for POST /models/{name}/load endpoint."""
 
-    def test_load_model_returns_200(self, client: TestClient):
-        """Test load model endpoint returns 200."""
-        response = client.post("/models/yolov8n/load")
+    def test_load_rtdetr_model_returns_200(self, client: TestClient):
+        """Test load RT-DETR model endpoint returns 200."""
+        response = client.post("/models/rtdetr-l/load")
         assert response.status_code == 200
 
-    def test_load_model_response_schema(self, client: TestClient):
-        """Test load model response has correct fields."""
-        response = client.post("/models/yolov8n/load")
+    def test_load_rtdetr_model_response_schema(self, client: TestClient):
+        """Test load RT-DETR model response has correct fields."""
+        response = client.post("/models/rtdetr-l/load")
         data = response.json()
-        assert data["name"] == "yolov8n"
+        assert data["name"] == "rtdetr-l"
         assert data["action"] == "load"
         assert data["state"] == "loaded"
 
@@ -111,8 +112,8 @@ class TestModelsLoadEndpoint:
 
     def test_load_model_then_get_shows_loaded(self, client: TestClient):
         """Test loading model then getting it shows loaded state."""
-        client.post("/models/yolov8n/load")
-        response = client.get("/models/yolov8n")
+        client.post("/models/rtdetr-l/load")
+        response = client.get("/models/rtdetr-l")
         data = response.json()
         assert data["loaded"] is True
         assert data["state"] == "loaded"
@@ -123,16 +124,16 @@ class TestModelsUnloadEndpoint:
 
     def test_unload_model_returns_200(self, client: TestClient):
         """Test unload model endpoint returns 200."""
-        client.post("/models/yolov8n/load")
-        response = client.post("/models/yolov8n/unload")
+        client.post("/models/rtdetr-l/load")
+        response = client.post("/models/rtdetr-l/unload")
         assert response.status_code == 200
 
     def test_unload_model_response_schema(self, client: TestClient):
         """Test unload model response has correct fields."""
-        client.post("/models/yolov8n/load")
-        response = client.post("/models/yolov8n/unload")
+        client.post("/models/rtdetr-l/load")
+        response = client.post("/models/rtdetr-l/unload")
         data = response.json()
-        assert data["name"] == "yolov8n"
+        assert data["name"] == "rtdetr-l"
         assert data["action"] == "unload"
         assert data["state"] == "not_loaded"
 
@@ -147,16 +148,16 @@ class TestModelsReloadEndpoint:
 
     def test_reload_model_returns_200(self, client: TestClient):
         """Test reload model endpoint returns 200."""
-        client.post("/models/yolov8n/load")
-        response = client.post("/models/yolov8n/reload")
+        client.post("/models/rtdetr-l/load")
+        response = client.post("/models/rtdetr-l/reload")
         assert response.status_code == 200
 
     def test_reload_model_response_schema(self, client: TestClient):
         """Test reload model response has correct fields."""
-        client.post("/models/yolov8n/load")
-        response = client.post("/models/yolov8n/reload")
+        client.post("/models/rtdetr-l/load")
+        response = client.post("/models/rtdetr-l/reload")
         data = response.json()
-        assert data["name"] == "yolov8n"
+        assert data["name"] == "rtdetr-l"
         assert data["action"] == "reload"
         assert data["state"] == "loaded"
 

@@ -129,5 +129,8 @@ class TestHealthSchemas:
             successful_requests=95,
             failed_requests=5,
             average_inference_time_ms=50.0,
+            images_processed=90,
+            total_detections=450,
+            average_detections_per_image=5.0,
         )
         assert response.request_count == 100

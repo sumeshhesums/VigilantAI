@@ -3,12 +3,13 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
-
 
 @pytest.fixture
-def client():
-    """Create test client with lifespan."""
+def client(monkeypatch):
+    """Create test client with lifespan (auto-load disabled)."""
+    monkeypatch.setenv("AI_SERVICE_AUTO_LOAD", "false")
+    from app.main import app
+
     with TestClient(app) as c:
         yield c
 
@@ -26,13 +27,10 @@ class TestAPIContracts:
         response = client.get("/health/detailed")
         assert response.status_code == 200
 
-    def test_inference_endpoint_not_implemented(self, client: TestClient):
-        """Test inference endpoint returns 501."""
-        response = client.post(
-            "/inference",
-            json={"image_url": "http://example.com/image.jpg"},
-        )
-        assert response.status_code == 501
+    def test_inference_endpoint_requires_file(self, client: TestClient):
+        """Test inference endpoint requires file upload (422 without)."""
+        response = client.post("/inference")
+        assert response.status_code == 422
 
     def test_batch_inference_endpoint_not_implemented(self, client: TestClient):
         """Test batch inference endpoint returns 501."""

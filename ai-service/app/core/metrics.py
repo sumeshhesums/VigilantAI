@@ -13,6 +13,9 @@ class MetricsSnapshot:
     failed_requests: int
     average_inference_time_ms: float
     uptime_seconds: float
+    images_processed: int
+    total_detections: int
+    average_detections_per_image: float
 
 
 class MetricsManager:
@@ -24,6 +27,8 @@ class MetricsManager:
         self._successful_requests: int = 0
         self._failed_requests: int = 0
         self._total_inference_time_ms: float = 0.0
+        self._images_processed: int = 0
+        self._total_detections: int = 0
 
     @property
     def uptime_seconds(self) -> float:
@@ -40,6 +45,28 @@ class MetricsManager:
         self._request_count += 1
         if success:
             self._successful_requests += 1
+        else:
+            self._failed_requests += 1
+        self._total_inference_time_ms += inference_time_ms
+
+    def record_inference(
+        self,
+        success: bool,
+        inference_time_ms: float,
+        detection_count: int = 0,
+    ) -> None:
+        """Record an inference request with detection count.
+
+        Args:
+            success: Whether inference succeeded.
+            inference_time_ms: Total processing time in milliseconds.
+            detection_count: Number of detections returned.
+        """
+        self._request_count += 1
+        if success:
+            self._successful_requests += 1
+            self._images_processed += 1
+            self._total_detections += detection_count
         else:
             self._failed_requests += 1
         self._total_inference_time_ms += inference_time_ms
@@ -62,6 +89,20 @@ class MetricsManager:
             return 0.0
         return self._total_inference_time_ms / self._request_count
 
+    def get_images_processed(self) -> int:
+        """Get total images processed."""
+        return self._images_processed
+
+    def get_total_detections(self) -> int:
+        """Get total detections across all requests."""
+        return self._total_detections
+
+    def get_average_detections_per_image(self) -> float:
+        """Get average detections per image."""
+        if self._images_processed == 0:
+            return 0.0
+        return self._total_detections / self._images_processed
+
     def get_snapshot(self) -> MetricsSnapshot:
         """Get current metrics snapshot.
 
@@ -74,6 +115,9 @@ class MetricsManager:
             failed_requests=self._failed_requests,
             average_inference_time_ms=self.get_average_inference_time_ms(),
             uptime_seconds=self.uptime_seconds,
+            images_processed=self._images_processed,
+            total_detections=self._total_detections,
+            average_detections_per_image=self.get_average_detections_per_image(),
         )
 
     def reset(self) -> None:
@@ -83,3 +127,5 @@ class MetricsManager:
         self._successful_requests = 0
         self._failed_requests = 0
         self._total_inference_time_ms = 0.0
+        self._images_processed = 0
+        self._total_detections = 0

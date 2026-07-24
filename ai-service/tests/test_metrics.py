@@ -20,6 +20,9 @@ class TestMetricsManager:
         assert manager.get_successful_requests() == 0
         assert manager.get_failed_requests() == 0
         assert manager.get_average_inference_time_ms() == 0.0
+        assert manager.get_images_processed() == 0
+        assert manager.get_total_detections() == 0
+        assert manager.get_average_detections_per_image() == 0.0
 
     def test_record_successful_request(self, manager: MetricsManager):
         """Test recording successful request."""
@@ -45,10 +48,43 @@ class TestMetricsManager:
         """Test average inference time with no requests."""
         assert manager.get_average_inference_time_ms() == 0.0
 
+    def test_record_inference(self, manager: MetricsManager):
+        """Test recording inference with detection count."""
+        manager.record_inference(
+            success=True, inference_time_ms=45.0, detection_count=3
+        )
+        assert manager.get_request_count() == 1
+        assert manager.get_successful_requests() == 1
+        assert manager.get_images_processed() == 1
+        assert manager.get_total_detections() == 3
+
+    def test_record_inference_failed(self, manager: MetricsManager):
+        """Test recording failed inference."""
+        manager.record_inference(
+            success=False, inference_time_ms=10.0, detection_count=0
+        )
+        assert manager.get_failed_requests() == 1
+        assert manager.get_images_processed() == 0
+        assert manager.get_total_detections() == 0
+
+    def test_average_detections_per_image(self, manager: MetricsManager):
+        """Test average detections per image calculation."""
+        manager.record_inference(
+            success=True, inference_time_ms=50.0, detection_count=2
+        )
+        manager.record_inference(
+            success=True, inference_time_ms=60.0, detection_count=4
+        )
+        assert manager.get_average_detections_per_image() == 3.0
+
     def test_get_snapshot(self, manager: MetricsManager):
         """Test get_snapshot returns correct metrics."""
-        manager.record_request(success=True, inference_time_ms=50.0)
-        manager.record_request(success=False, inference_time_ms=100.0)
+        manager.record_inference(
+            success=True, inference_time_ms=50.0, detection_count=2
+        )
+        manager.record_inference(
+            success=False, inference_time_ms=100.0, detection_count=0
+        )
 
         snapshot = manager.get_snapshot()
         assert snapshot.request_count == 2
@@ -56,16 +92,23 @@ class TestMetricsManager:
         assert snapshot.failed_requests == 1
         assert snapshot.average_inference_time_ms == 75.0
         assert snapshot.uptime_seconds >= 0
+        assert snapshot.images_processed == 1
+        assert snapshot.total_detections == 2
+        assert snapshot.average_detections_per_image == 2.0
 
     def test_reset_metrics(self, manager: MetricsManager):
         """Test reset clears all metrics."""
-        manager.record_request(success=True, inference_time_ms=50.0)
+        manager.record_inference(
+            success=True, inference_time_ms=50.0, detection_count=3
+        )
         manager.reset()
 
         assert manager.get_request_count() == 0
         assert manager.get_successful_requests() == 0
         assert manager.get_failed_requests() == 0
         assert manager.get_average_inference_time_ms() == 0.0
+        assert manager.get_images_processed() == 0
+        assert manager.get_total_detections() == 0
 
     def test_uptime_increases(self, manager: MetricsManager):
         """Test uptime increases over time."""

@@ -1,6 +1,7 @@
 """Tests for model factory implementations."""
 
 import pytest
+from unittest.mock import MagicMock, patch
 
 from app.models.base import ModelState
 from app.models.factory import YOLOModel, RTDETRModel, GroundingDINOModel
@@ -12,20 +13,28 @@ class TestYOLOModel:
     @pytest.mark.asyncio
     async def test_load_sets_metadata(self):
         """Test loading YOLO model sets correct metadata."""
-        model = YOLOModel(name="yolov8n", version="8.0.0", device="cpu")
-        await model.load()
+        mock_model = MagicMock()
+        mock_model.names = {0: "person", 1: "car", 2: "dog"}
+
+        with patch("ultralytics.YOLO", return_value=mock_model):
+            model = YOLOModel(name="yolov8n", version="8.0.0", device="cpu")
+            await model.load()
         assert model.is_loaded
         assert model.metadata.input_shape == [1, 3, 640, 640]
-        assert model.metadata.class_count == 80
+        assert model.metadata.class_count == 3
         assert model.metadata.model_type == "yolo"
         assert model.metadata.extra["framework"] == "ultralytics"
 
     @pytest.mark.asyncio
     async def test_unload_clears_metadata(self):
         """Test unloading YOLO model clears metadata."""
-        model = YOLOModel()
-        await model.load()
-        await model.unload()
+        mock_model = MagicMock()
+        mock_model.names = {0: "person"}
+
+        with patch("ultralytics.YOLO", return_value=mock_model):
+            model = YOLOModel()
+            await model.load()
+            await model.unload()
         assert not model.is_loaded
         assert model.metadata.input_shape is None
         assert model.metadata.class_count is None
@@ -107,18 +116,27 @@ class TestBaseModelLifecycle:
     @pytest.mark.asyncio
     async def test_load_idempotent(self):
         """Test loading already loaded model returns immediately."""
-        model = YOLOModel()
-        m1 = await model.load()
-        m2 = await model.load()
-        assert m1 is m2
+        mock_model = MagicMock()
+        mock_model.names = {0: "person"}
+
+        with patch("ultralytics.YOLO", return_value=mock_model):
+            model = YOLOModel()
+            m1 = await model.load()
+            m2 = await model.load()
+            assert m1 is m2
 
     @pytest.mark.asyncio
     async def test_warmup_after_load(self):
         """Test warmup works after loading."""
-        model = YOLOModel()
-        await model.load()
-        result = await model.warmup()
-        assert result.state == ModelState.LOADED
+        mock_model = MagicMock()
+        mock_model.names = {0: "person"}
+        mock_model.predict.return_value = []
+
+        with patch("ultralytics.YOLO", return_value=mock_model):
+            model = YOLOModel()
+            await model.load()
+            result = await model.warmup()
+            assert result.state == ModelState.LOADED
 
     @pytest.mark.asyncio
     async def test_warmup_before_load_raises(self):

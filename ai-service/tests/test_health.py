@@ -3,12 +3,13 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
-
 
 @pytest.fixture
-def client():
-    """Create test client with lifespan."""
+def client(monkeypatch):
+    """Create test client with lifespan (auto-load disabled)."""
+    monkeypatch.setenv("AI_SERVICE_AUTO_LOAD", "false")
+    from app.main import app
+
     with TestClient(app) as c:
         yield c
 
@@ -49,6 +50,9 @@ class TestHealthEndpoints:
         assert "successful_requests" in data
         assert "failed_requests" in data
         assert "average_inference_time_ms" in data
+        assert "images_processed" in data
+        assert "total_detections" in data
+        assert "average_detections_per_image" in data
 
     def test_health_model_info_has_required_fields(self, client: TestClient):
         """Test health endpoint model info has required fields."""

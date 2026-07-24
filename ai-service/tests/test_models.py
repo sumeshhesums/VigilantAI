@@ -4,7 +4,7 @@ import pytest
 
 from app.core.model_manager import ModelManager
 from app.models.base import ModelState
-from app.models.factory import YOLOModel
+from app.models.factory import RTDETRModel
 from app.models.loader import ModelLoader
 from app.models.registry import ModelRegistry
 
@@ -16,7 +16,7 @@ class TestModelManager:
     def manager(self):
         """Create a ModelManager with a single test model."""
         reg = ModelRegistry()
-        reg.register_model(YOLOModel(name="test_model", version="1.0.0"))
+        reg.register_model(RTDETRModel(name="test_model", version="1.0.0"))
         reg.set_default("test_model")
         loader = ModelLoader(reg)
         return ModelManager(

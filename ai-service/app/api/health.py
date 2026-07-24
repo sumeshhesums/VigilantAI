@@ -72,4 +72,7 @@ async def detailed_health_check(
         successful_requests=snapshot.successful_requests,
         failed_requests=snapshot.failed_requests,
         average_inference_time_ms=snapshot.average_inference_time_ms,
+        images_processed=snapshot.images_processed,
+        total_detections=snapshot.total_detections,
+        average_detections_per_image=snapshot.average_detections_per_image,
     )

@@ -17,6 +17,10 @@ class TestSettings:
         assert settings.DEVICE == "cpu"
         assert settings.MAX_BATCH_SIZE == 16
         assert settings.MAX_IMAGE_SIZE == 1920
+        assert settings.CONFIDENCE_THRESHOLD == 0.5
+        assert settings.IOU_THRESHOLD == 0.45
+        assert settings.MODEL_PATH == ""
+        assert settings.INFERENCE_TIMEOUT == 10.0
         assert settings.REQUEST_TIMEOUT == 30.0
         assert settings.SERVICE_NAME == "ai-service"
         assert settings.SERVICE_VERSION == "0.1.0"

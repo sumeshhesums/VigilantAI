@@ -14,6 +14,7 @@ from app.api import health, inference, models
 from app.config import Settings, get_settings
 from app.core.metrics import MetricsManager
 from app.core.model_manager import ModelManager
+from app.inference.detector import YoloDetector
 from app.logging import get_logger, setup_logging
 from app.models.base import BaseModel
 from app.models.factory import GroundingDINOModel, RTDETRModel, YOLOModel
@@ -83,10 +84,12 @@ async def lifespan(app: FastAPI):
         logger.info("Auto-loading default model: %s", settings.DEFAULT_MODEL)
         await loader.load_model(settings.DEFAULT_MODEL)
 
-    # Initialize inference service
+    # Initialize detector and inference service
+    detector = YoloDetector(settings=settings)
     inference_service = InferenceService(
         model_manager=model_manager,
         metrics_manager=metrics_manager,
+        detector=detector,
     )
 
     # Store in app state for dependency injection
