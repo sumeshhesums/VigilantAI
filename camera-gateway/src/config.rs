@@ -1,4 +1,7 @@
+use std::collections::HashMap;
 use std::time::Duration;
+
+use crate::backend::models::IncidentSeverity;
 
 /// AI service integration configuration.
 #[derive(Debug, Clone)]
@@ -74,6 +77,44 @@ impl ReconnectConfig {
     }
 }
 
+/// Backend incident API integration configuration.
+#[derive(Debug, Clone)]
+pub struct BackendConfig {
+    /// Base URL of the backend API (e.g. http://backend:8080).
+    pub url: String,
+    /// Request timeout for backend API calls.
+    pub request_timeout: Duration,
+    /// Bearer token for authenticating with the backend.
+    pub auth_token: String,
+    /// Whether to automatically publish detections as incidents.
+    pub auto_publish: bool,
+    /// Maximum number of retry attempts for transient failures.
+    pub publish_retries: u32,
+    /// Mapping from detection class_name to incident severity.
+    pub severity_mapping: HashMap<String, IncidentSeverity>,
+}
+
+impl Default for BackendConfig {
+    fn default() -> Self {
+        let mut severity_mapping = HashMap::new();
+        severity_mapping.insert("person".to_string(), IncidentSeverity::Medium);
+        severity_mapping.insert("vehicle".to_string(), IncidentSeverity::Low);
+        severity_mapping.insert("fire".to_string(), IncidentSeverity::Critical);
+        severity_mapping.insert("smoke".to_string(), IncidentSeverity::High);
+        severity_mapping.insert("weapon".to_string(), IncidentSeverity::Critical);
+        severity_mapping.insert("unknown".to_string(), IncidentSeverity::Low);
+
+        Self {
+            url: "http://localhost:8080".to_string(),
+            request_timeout: Duration::from_secs(10),
+            auth_token: String::new(),
+            auto_publish: true,
+            publish_retries: 3,
+            severity_mapping,
+        }
+    }
+}
+
 /// Top-level gateway configuration.
 #[derive(Debug, Clone)]
 pub struct GatewayConfig {
@@ -85,6 +126,8 @@ pub struct GatewayConfig {
     pub reconnect: ReconnectConfig,
     /// AI service integration settings.
     pub ai: AiConfig,
+    /// Backend incident API integration settings.
+    pub backend: BackendConfig,
 }
 
 impl Default for GatewayConfig {
@@ -94,6 +137,7 @@ impl Default for GatewayConfig {
             rtsp: RtspConfig::default(),
             reconnect: ReconnectConfig::default(),
             ai: AiConfig::default(),
+            backend: BackendConfig::default(),
         }
     }
 }
@@ -155,5 +199,67 @@ mod tests {
         let policy = config.to_policy();
         assert_eq!(policy.initial_delay, Duration::from_secs(1));
         assert_eq!(policy.max_delay, Duration::from_secs(60));
+    }
+
+    #[test]
+    fn test_backend_config_defaults() {
+        let config = BackendConfig::default();
+        assert_eq!(config.url, "http://localhost:8080");
+        assert_eq!(config.request_timeout, Duration::from_secs(10));
+        assert!(config.auth_token.is_empty());
+        assert!(config.auto_publish);
+        assert_eq!(config.publish_retries, 3);
+    }
+
+    #[test]
+    fn test_backend_config_severity_mapping() {
+        let config = BackendConfig::default();
+        assert_eq!(
+            config.severity_mapping.get("person"),
+            Some(&IncidentSeverity::Medium)
+        );
+        assert_eq!(
+            config.severity_mapping.get("vehicle"),
+            Some(&IncidentSeverity::Low)
+        );
+        assert_eq!(
+            config.severity_mapping.get("fire"),
+            Some(&IncidentSeverity::Critical)
+        );
+        assert_eq!(
+            config.severity_mapping.get("smoke"),
+            Some(&IncidentSeverity::High)
+        );
+        assert_eq!(
+            config.severity_mapping.get("weapon"),
+            Some(&IncidentSeverity::Critical)
+        );
+        assert_eq!(
+            config.severity_mapping.get("unknown"),
+            Some(&IncidentSeverity::Low)
+        );
+    }
+
+    #[test]
+    fn test_backend_config_clone() {
+        let config = BackendConfig::default();
+        let cloned = config.clone();
+        assert_eq!(config.url, cloned.url);
+        assert_eq!(config.auth_token, cloned.auth_token);
+    }
+
+    #[test]
+    fn test_backend_config_debug() {
+        let config = BackendConfig::default();
+        let debug = format!("{config:?}");
+        assert!(debug.contains("BackendConfig"));
+        assert!(debug.contains("8080"));
+    }
+
+    #[test]
+    fn test_gateway_config_includes_backend() {
+        let config = GatewayConfig::default();
+        assert_eq!(config.backend.url, "http://localhost:8080");
+        assert!(config.backend.auto_publish);
     }
 }

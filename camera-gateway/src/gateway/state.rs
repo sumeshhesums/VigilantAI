@@ -74,7 +74,7 @@ impl Default for GatewayState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{AiConfig, RtspConfig};
+    use crate::config::{AiConfig, BackendConfig, RtspConfig};
     use crate::models::Camera;
 
     fn test_rtsp_config() -> RtspConfig {
@@ -107,8 +107,15 @@ mod tests {
     async fn test_camera_count_after_insert() {
         let state = GatewayState::new();
         let camera = test_camera("cam1");
-        let worker =
-            Arc::new(CameraWorker::new(&camera, test_rtsp_config(), AiConfig::default()).unwrap());
+        let worker = Arc::new(
+            CameraWorker::new(
+                &camera,
+                test_rtsp_config(),
+                AiConfig::default(),
+                BackendConfig::default(),
+            )
+            .unwrap(),
+        );
 
         state.cameras.write().await.insert(camera.id, worker);
         state.increment_registrations();
@@ -120,8 +127,15 @@ mod tests {
     async fn test_online_count() {
         let state = GatewayState::new();
         let camera = test_camera("cam1");
-        let worker =
-            Arc::new(CameraWorker::new(&camera, test_rtsp_config(), AiConfig::default()).unwrap());
+        let worker = Arc::new(
+            CameraWorker::new(
+                &camera,
+                test_rtsp_config(),
+                AiConfig::default(),
+                BackendConfig::default(),
+            )
+            .unwrap(),
+        );
         worker.start().await;
 
         state.cameras.write().await.insert(camera.id, worker);
@@ -134,8 +148,15 @@ mod tests {
     async fn test_offline_count_stopped() {
         let state = GatewayState::new();
         let camera = test_camera("cam1");
-        let worker =
-            Arc::new(CameraWorker::new(&camera, test_rtsp_config(), AiConfig::default()).unwrap());
+        let worker = Arc::new(
+            CameraWorker::new(
+                &camera,
+                test_rtsp_config(),
+                AiConfig::default(),
+                BackendConfig::default(),
+            )
+            .unwrap(),
+        );
         worker.start().await;
         worker.stop().await;
 
@@ -150,21 +171,42 @@ mod tests {
         let state = GatewayState::new();
 
         let cam1 = test_camera("online-cam");
-        let w1 =
-            Arc::new(CameraWorker::new(&cam1, test_rtsp_config(), AiConfig::default()).unwrap());
+        let w1 = Arc::new(
+            CameraWorker::new(
+                &cam1,
+                test_rtsp_config(),
+                AiConfig::default(),
+                BackendConfig::default(),
+            )
+            .unwrap(),
+        );
         w1.start().await;
         state.cameras.write().await.insert(cam1.id, w1);
         state.increment_registrations();
 
         let cam2 = test_camera("offline-cam");
-        let w2 =
-            Arc::new(CameraWorker::new(&cam2, test_rtsp_config(), AiConfig::default()).unwrap());
+        let w2 = Arc::new(
+            CameraWorker::new(
+                &cam2,
+                test_rtsp_config(),
+                AiConfig::default(),
+                BackendConfig::default(),
+            )
+            .unwrap(),
+        );
         state.cameras.write().await.insert(cam2.id, w2);
         state.increment_registrations();
 
         let cam3 = test_camera("stopped-cam");
-        let w3 =
-            Arc::new(CameraWorker::new(&cam3, test_rtsp_config(), AiConfig::default()).unwrap());
+        let w3 = Arc::new(
+            CameraWorker::new(
+                &cam3,
+                test_rtsp_config(),
+                AiConfig::default(),
+                BackendConfig::default(),
+            )
+            .unwrap(),
+        );
         w3.start().await;
         w3.stop().await;
         state.cameras.write().await.insert(cam3.id, w3);
@@ -179,8 +221,15 @@ mod tests {
     async fn test_removal() {
         let state = GatewayState::new();
         let camera = test_camera("cam1");
-        let worker =
-            Arc::new(CameraWorker::new(&camera, test_rtsp_config(), AiConfig::default()).unwrap());
+        let worker = Arc::new(
+            CameraWorker::new(
+                &camera,
+                test_rtsp_config(),
+                AiConfig::default(),
+                BackendConfig::default(),
+            )
+            .unwrap(),
+        );
 
         state.cameras.write().await.insert(camera.id, worker);
         state.increment_registrations();
@@ -209,7 +258,13 @@ mod tests {
                     enabled: true,
                 };
                 let worker = Arc::new(
-                    CameraWorker::new(&camera, test_rtsp_config(), AiConfig::default()).unwrap(),
+                    CameraWorker::new(
+                        &camera,
+                        test_rtsp_config(),
+                        AiConfig::default(),
+                        BackendConfig::default(),
+                    )
+                    .unwrap(),
                 );
                 state.cameras.write().await.insert(camera.id, worker);
                 state.increment_registrations();

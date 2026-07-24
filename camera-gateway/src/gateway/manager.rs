@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::ai::error::AIClientError;
+use crate::backend::error::BackendClientError;
 use crate::config::GatewayConfig;
 use crate::models::Camera;
 use crate::stream::reconnect::BackoffState;
@@ -17,6 +18,15 @@ pub struct AiHealthMetrics {
     pub failed_requests: u64,
 }
 
+/// Aggregate backend incident publishing health metrics.
+#[derive(Debug, Clone, Default)]
+pub struct BackendHealthMetrics {
+    pub backend_reachable: bool,
+    pub last_publish: Option<std::time::Instant>,
+    pub successful_publishes: u64,
+    pub failed_publishes: u64,
+}
+
 /// Manages camera registration, worker lifecycle, and automatic reconnection.
 pub struct GatewayManager {
     state: Arc<GatewayState>,
@@ -31,8 +41,13 @@ impl GatewayManager {
     /// Register a new camera and create a worker for it.
     pub async fn register_camera(&self, camera: Camera) -> Result<Arc<CameraWorker>, String> {
         let worker = Arc::new(
-            CameraWorker::new(&camera, self.config.rtsp.clone(), self.config.ai.clone())
-                .map_err(|e| e.to_string())?,
+            CameraWorker::new(
+                &camera,
+                self.config.rtsp.clone(),
+                self.config.ai.clone(),
+                self.config.backend.clone(),
+            )
+            .map_err(|e| e.to_string())?,
         );
         self.state
             .cameras
@@ -180,6 +195,50 @@ impl GatewayManager {
             last_inference,
             successful_requests: successful,
             failed_requests: failed,
+        }
+    }
+
+    /// Check backend API health via any registered worker's backend client.
+    pub async fn check_backend_health(&self) -> Result<(), BackendClientError> {
+        let client = {
+            let cameras = self.state.cameras.read().await;
+            cameras.values().find_map(|w| w.backend_client().cloned())
+        };
+
+        match client {
+            Some(c) => c.health().await,
+            None => Err(BackendClientError::Offline { url: String::new() }),
+        }
+    }
+
+    /// Collect aggregated backend publishing metrics across all workers.
+    pub async fn backend_health_metrics(&self) -> BackendHealthMetrics {
+        let cameras = self.state.cameras.read().await;
+
+        let mut successful: u64 = 0;
+        let mut failed: u64 = 0;
+        let mut last_publish: Option<std::time::Instant> = None;
+
+        for worker in cameras.values() {
+            successful += worker.successful_publishes();
+            failed += worker.failed_publishes();
+
+            if let Some(t) = worker.last_publish_time().await {
+                match last_publish {
+                    Some(prev) if t > prev => last_publish = Some(t),
+                    None => last_publish = Some(t),
+                    _ => {}
+                }
+            }
+        }
+
+        let backend_reachable = self.check_backend_health().await.is_ok();
+
+        BackendHealthMetrics {
+            backend_reachable,
+            last_publish,
+            successful_publishes: successful,
+            failed_publishes: failed,
         }
     }
 
@@ -494,5 +553,66 @@ mod tests {
         let metrics = manager.ai_health_metrics().await;
         assert!(!metrics.ai_reachable);
         assert_eq!(metrics.successful_requests, 0);
+    }
+
+    #[tokio::test]
+    async fn test_backend_health_check_no_workers() {
+        let state = Arc::new(GatewayState::new());
+        let manager = GatewayManager::new(Arc::clone(&state), test_config());
+
+        let result = manager.check_backend_health().await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_backend_health_check_offline() {
+        let state = Arc::new(GatewayState::new());
+        let config = GatewayConfig {
+            backend: crate::config::BackendConfig {
+                url: "http://127.0.0.1:19993".to_string(),
+                auth_token: "test-token".to_string(),
+                ..crate::config::BackendConfig::default()
+            },
+            ..test_config()
+        };
+        let manager = GatewayManager::new(Arc::clone(&state), config);
+
+        let camera = test_camera("cam1");
+        manager.register_camera(camera).await.unwrap();
+
+        let result = manager.check_backend_health().await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_backend_health_metrics_initial() {
+        let state = Arc::new(GatewayState::new());
+        let manager = GatewayManager::new(Arc::clone(&state), test_config());
+
+        let metrics = manager.backend_health_metrics().await;
+        assert_eq!(metrics.successful_publishes, 0);
+        assert_eq!(metrics.failed_publishes, 0);
+        assert!(metrics.last_publish.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_backend_health_metrics_with_worker() {
+        let state = Arc::new(GatewayState::new());
+        let config = GatewayConfig {
+            backend: crate::config::BackendConfig {
+                url: "http://127.0.0.1:19992".to_string(),
+                auth_token: "test-token".to_string(),
+                ..crate::config::BackendConfig::default()
+            },
+            ..test_config()
+        };
+        let manager = GatewayManager::new(Arc::clone(&state), config);
+
+        let camera = test_camera("cam1");
+        manager.register_camera(camera).await.unwrap();
+
+        let metrics = manager.backend_health_metrics().await;
+        assert!(!metrics.backend_reachable);
+        assert_eq!(metrics.successful_publishes, 0);
     }
 }

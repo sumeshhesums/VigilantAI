@@ -7,7 +7,12 @@ use tokio::sync::RwLock;
 use crate::ai::client::AIClient;
 use crate::ai::error::AIClientError;
 use crate::ai::models::DetectionResponse;
-use crate::config::{AiConfig, RtspConfig};
+use crate::backend::client::BackendClient;
+use crate::backend::error::BackendClientError;
+use crate::backend::models::{
+    BoundingBox as BackendBoundingBox, IncidentRequest, IncidentSeverity,
+};
+use crate::config::{AiConfig, BackendConfig, RtspConfig};
 use crate::models::{Camera, CameraStatus};
 use crate::stream::client::{RTSPClient, RtspError};
 
@@ -23,6 +28,8 @@ pub struct CameraWorker {
     camera_name: String,
     client: RTSPClient,
     ai_client: AIClient,
+    backend_client: Option<BackendClient>,
+    backend_config: BackendConfig,
     status: RwLock<CameraStatus>,
     started_at: Option<Instant>,
     last_seen: RwLock<Option<Instant>>,
@@ -34,6 +41,10 @@ pub struct CameraWorker {
     last_inference_error: RwLock<Option<AIClientError>>,
     successful_requests: std::sync::atomic::AtomicU64,
     failed_requests: std::sync::atomic::AtomicU64,
+    successful_publishes: std::sync::atomic::AtomicU64,
+    failed_publishes: std::sync::atomic::AtomicU64,
+    last_publish: RwLock<Option<Instant>>,
+    last_publish_error: RwLock<Option<BackendClientError>>,
 }
 
 impl CameraWorker {
@@ -41,14 +52,23 @@ impl CameraWorker {
         camera: &Camera,
         rtsp_config: RtspConfig,
         ai_config: AiConfig,
+        backend_config: BackendConfig,
     ) -> Result<Self, RtspError> {
         let client = RTSPClient::new(camera.rtsp_url.clone(), rtsp_config)?;
         let ai_client = AIClient::new(ai_config);
+        let backend_client = if backend_config.auto_publish && !backend_config.auth_token.is_empty()
+        {
+            Some(BackendClient::new(backend_config.clone()))
+        } else {
+            None
+        };
         Ok(Self {
             camera_id: camera.id,
             camera_name: camera.name.clone(),
             client,
             ai_client,
+            backend_client,
+            backend_config,
             status: RwLock::new(CameraStatus::Offline),
             started_at: None,
             last_seen: RwLock::new(None),
@@ -60,6 +80,10 @@ impl CameraWorker {
             last_inference_error: RwLock::new(None),
             successful_requests: std::sync::atomic::AtomicU64::new(0),
             failed_requests: std::sync::atomic::AtomicU64::new(0),
+            successful_publishes: std::sync::atomic::AtomicU64::new(0),
+            failed_publishes: std::sync::atomic::AtomicU64::new(0),
+            last_publish: RwLock::new(None),
+            last_publish_error: RwLock::new(None),
         })
     }
 
@@ -118,6 +142,31 @@ impl CameraWorker {
     /// Get the count of failed inference requests.
     pub fn failed_requests(&self) -> u64 {
         self.failed_requests.load(Ordering::Relaxed)
+    }
+
+    /// Get a reference to the backend client, if configured.
+    pub fn backend_client(&self) -> Option<&BackendClient> {
+        self.backend_client.as_ref()
+    }
+
+    /// Get the count of successful incident publishes.
+    pub fn successful_publishes(&self) -> u64 {
+        self.successful_publishes.load(Ordering::Relaxed)
+    }
+
+    /// Get the count of failed incident publishes.
+    pub fn failed_publishes(&self) -> u64 {
+        self.failed_publishes.load(Ordering::Relaxed)
+    }
+
+    /// Get the time of the last successful publish.
+    pub async fn last_publish_time(&self) -> Option<Instant> {
+        *self.last_publish.read().await
+    }
+
+    /// Get the last backend publish error, if any.
+    pub async fn last_publish_error(&self) -> Option<BackendClientError> {
+        self.last_publish_error.read().await.clone()
     }
 
     /// Start the worker — connect to the RTSP stream.
@@ -205,6 +254,11 @@ impl CameraWorker {
     /// This is a single inference cycle. Returns the detection response on
     /// success, or an error. Frame capture is currently simulated (no RTSP
     /// decoding).
+    ///
+    /// When a backend client is configured and auto_publish is enabled, each
+    /// detection is published as an incident to the backend API. Publishing
+    /// is blocking (waits for all publishes before returning) and failures
+    /// are non-blocking (logged and counted, worker continues).
     pub async fn capture_and_infer(
         &self,
         source: &str,
@@ -222,6 +276,10 @@ impl CameraWorker {
                 let mut last_err = self.last_inference_error.write().await;
                 *last_err = None;
                 self.successful_requests.fetch_add(1, Ordering::Relaxed);
+
+                if self.backend_client.is_some() {
+                    self.publish_detections(det).await;
+                }
             }
             Err(e) => {
                 let mut last_err = self.last_inference_error.write().await;
@@ -247,6 +305,79 @@ impl CameraWorker {
 
             tokio::time::sleep(interval).await;
         }
+    }
+
+    /// Publish all detections from a DetectionResponse as incidents.
+    ///
+    /// Blocks until all publishes complete. Failures are logged and counted
+    /// but do not prevent other detections from being published.
+    async fn publish_detections(&self, response: &DetectionResponse) {
+        let Some(client) = &self.backend_client else {
+            return;
+        };
+
+        for detection in &response.detections {
+            let severity = self.map_severity(&detection.class_name);
+            let bbox = Self::convert_bbox(&detection.bbox);
+
+            let metadata = serde_json::json!({
+                "model_name": response.metadata.model_name,
+                "inference_time_ms": response.inference_time_ms,
+                "source": response.metadata.source,
+            });
+
+            let request = IncidentRequest {
+                camera_id: self.camera_id,
+                timestamp: None,
+                severity,
+                event_type: detection.class_name.clone(),
+                confidence: detection.confidence,
+                bounding_box: bbox,
+                metadata: Some(metadata),
+            };
+
+            match client.publish_incident(&request).await {
+                Ok(_) => {
+                    self.successful_publishes.fetch_add(1, Ordering::Relaxed);
+                    let mut last_pub = self.last_publish.write().await;
+                    *last_pub = Some(Instant::now());
+                    let mut last_err = self.last_publish_error.write().await;
+                    *last_err = None;
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        camera_id = %self.camera_id,
+                        event_type = %detection.class_name,
+                        error = %e,
+                        "failed to publish incident"
+                    );
+                    self.failed_publishes.fetch_add(1, Ordering::Relaxed);
+                    let mut last_err = self.last_publish_error.write().await;
+                    *last_err = Some(e);
+                }
+            }
+        }
+    }
+
+    /// Map a detection class name to an incident severity using the configured mapping.
+    ///
+    /// Falls back to Low for unmapped class names.
+    fn map_severity(&self, class_name: &str) -> IncidentSeverity {
+        self.backend_config
+            .severity_mapping
+            .get(class_name)
+            .copied()
+            .unwrap_or(IncidentSeverity::Low)
+    }
+
+    /// Convert an AI BoundingBox (8-field) to a backend BoundingBox (4-field).
+    fn convert_bbox(bbox: &crate::ai::models::BoundingBox) -> Option<BackendBoundingBox> {
+        Some(BackendBoundingBox {
+            x1: bbox.x1,
+            y1: bbox.y1,
+            x2: bbox.x2,
+            y2: bbox.y2,
+        })
     }
 
     /// Generate a simulated JPEG frame.
@@ -298,6 +429,8 @@ impl fmt::Debug for CameraWorker {
             .field("enabled", &self.is_enabled())
             .field("successful_requests", &self.successful_requests())
             .field("failed_requests", &self.failed_requests())
+            .field("successful_publishes", &self.successful_publishes())
+            .field("failed_publishes", &self.failed_publishes())
             .finish_non_exhaustive()
     }
 }
@@ -316,6 +449,10 @@ mod tests {
         AiConfig::default()
     }
 
+    fn test_backend_config() -> BackendConfig {
+        BackendConfig::default()
+    }
+
     fn test_camera(enabled: bool) -> Camera {
         Camera {
             id: uuid::Uuid::new_v4(),
@@ -331,7 +468,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_new_status_offline() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         assert_eq!(worker.status().await, CameraStatus::Offline);
         assert!(!worker.is_running());
     }
@@ -339,7 +482,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_start_transitions_online() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         worker.start().await;
         assert_eq!(worker.status().await, CameraStatus::Online);
         assert!(worker.is_running());
@@ -350,7 +499,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_stop_transitions_stopped() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         worker.start().await;
         assert_eq!(worker.status().await, CameraStatus::Online);
 
@@ -362,7 +517,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_restart() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         worker.start().await;
         assert_eq!(worker.status().await, CameraStatus::Online);
 
@@ -374,7 +535,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_heartbeat_updates_last_seen() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         worker.start().await;
 
         let before = worker.last_seen().await.unwrap();
@@ -388,7 +555,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_heartbeat_preserves_online_status() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         worker.start().await;
 
         worker.heartbeat().await;
@@ -398,7 +571,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_disabled_does_not_start() {
         let camera = test_camera(false);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         worker.start().await;
         assert_eq!(worker.status().await, CameraStatus::Offline);
         assert!(!worker.is_running());
@@ -407,7 +586,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_set_enabled() {
         let camera = test_camera(false);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         assert!(!worker.is_enabled());
 
         worker.set_enabled(true);
@@ -420,7 +605,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_heartbeat_when_stopped_does_nothing() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         worker.start().await;
         worker.stop().await;
 
@@ -437,7 +628,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_no_error_on_success() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         worker.start().await;
         assert!(worker.last_error().await.is_none());
     }
@@ -445,7 +642,13 @@ mod tests {
     #[test]
     fn test_worker_metadata() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         assert_eq!(worker.camera_id(), camera.id);
         assert_eq!(worker.camera_name(), "Test Camera");
         assert_eq!(worker.rtsp_url(), "rtsp://10.0.0.1:554/stream");
@@ -454,14 +657,26 @@ mod tests {
     #[test]
     fn test_worker_client_accessible() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         assert_eq!(worker.client().url(), "rtsp://10.0.0.1:554/stream");
     }
 
     #[test]
     fn test_worker_debug() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         let debug = format!("{worker:?}");
         assert!(debug.contains("CameraWorker"));
         assert!(debug.contains("camera_id"));
@@ -479,14 +694,25 @@ mod tests {
             resolution: None,
             enabled: true,
         };
-        let result = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config());
+        let result = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        );
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_worker_initial_detection_none() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         assert!(worker.latest_detection().await.is_none());
         assert!(worker.last_inference_time().await.is_none());
         assert!(worker.last_inference_error().await.is_none());
@@ -501,7 +727,13 @@ mod tests {
             service_url: "http://127.0.0.1:19996".to_string(),
             ..AiConfig::default()
         };
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), ai_config).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            ai_config,
+            test_backend_config(),
+        )
+        .unwrap();
         let result = worker.capture_and_infer("cam-1").await;
         assert!(result.is_err());
         assert_eq!(worker.failed_requests(), 1);
@@ -513,7 +745,13 @@ mod tests {
     #[tokio::test]
     async fn test_worker_ai_client_accessible() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        let worker = CameraWorker::new(
+            &camera,
+            test_rtsp_config(),
+            test_ai_config(),
+            test_backend_config(),
+        )
+        .unwrap();
         assert_eq!(worker.ai_client().base_url(), "http://localhost:8081");
     }
 }
