@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use async_trait::async_trait;
 use axum::http::request::Parts;
 use axum::RequestPartsExt;
@@ -7,6 +9,8 @@ use axum_extra::TypedHeader;
 
 use crate::errors::AppError;
 use crate::models::User;
+use crate::rbac::permissions::{self, Permission};
+use crate::rbac::roles::Role;
 use crate::repository::user_repository::PostgresUserRepository;
 use crate::repository::UserRepository;
 use crate::security::jwt;
@@ -19,6 +23,36 @@ impl AuthUser {
     pub fn into_inner(self) -> User {
         self.0
     }
+}
+
+/// Load the user's roles from the database and insert both roles and
+/// computed permissions into request extensions for downstream RBAC extractors.
+async fn attach_roles_and_permissions(
+    parts: &mut Parts,
+    state: &AppState,
+    user_id: uuid::Uuid,
+) -> Result<(), AppError> {
+    // Query role names via the user_roles + roles join
+    let role_names: Vec<String> = sqlx::query_scalar(
+        "SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = $1",
+    )
+    .bind(user_id)
+    .fetch_all(&state.postgres_pool)
+    .await
+    .map_err(|e| AppError::Internal(anyhow::anyhow!(e)))?;
+
+    let roles: HashSet<Role> = role_names
+        .iter()
+        .filter_map(|name| name.parse::<Role>().ok())
+        .collect();
+
+    let perms: HashSet<Permission> =
+        permissions::permissions_for_roles(&roles.iter().copied().collect::<Vec<_>>());
+
+    parts.extensions.insert(roles);
+    parts.extensions.insert(perms);
+
+    Ok(())
 }
 
 #[async_trait]
@@ -49,7 +83,13 @@ impl axum::extract::FromRequestParts<AppState> for AuthUser {
             .map_err(AppError::Internal)?;
 
         match user {
-            Some(user) => Ok(AuthUser(user)),
+            Some(user) => {
+                // Attach roles + permissions for downstream RBAC guards.
+                // Errors here are non-fatal: the user is still authenticated
+                // even if role lookup fails (they just get empty roles).
+                let _ = attach_roles_and_permissions(parts, state, user.id).await;
+                Ok(AuthUser(user))
+            }
             None => Err(AppError::Unauthorized("user not found".into())),
         }
     }

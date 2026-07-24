@@ -20,6 +20,7 @@ chrono.workspace = true
 sqlx.workspace = true
 redis.workspace = true
 async-trait = "0.1"
+tower = { version = "0.5", features = ["util"] }
 argon2.workspace = true
 jsonwebtoken.workspace = true
 axum-extra.workspace = true

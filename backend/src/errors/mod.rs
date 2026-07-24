@@ -18,6 +18,9 @@ pub enum AppError {
 
     #[error("Conflict: {0}")]
     Conflict(String),
+
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
 }
 
 impl IntoResponse for AppError {
@@ -34,6 +37,7 @@ impl IntoResponse for AppError {
             AppError::InvalidToken(msg) => (StatusCode::UNAUTHORIZED, msg.clone()),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Resource not found".to_string()),
             AppError::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
+            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg.clone()),
         };
 
         let body = axum::Json(json!({
