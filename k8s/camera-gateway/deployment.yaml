@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: camera-gateway
+  namespace: vigilantai
+  labels:
+    app.kubernetes.io/name: camera-gateway
+    app.kubernetes.io/part-of: vigilantai
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: camera-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: camera-gateway
+        app.kubernetes.io/part-of: vigilantai
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: camera-gateway
+          image: vigilantai/camera-gateway:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+              protocol: TCP
+          env:
+            - name: GATEWAY_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: vigilantai-config
+                  key: GATEWAY_PORT
+            - name: GATEWAY_AI_SERVICE_URL
+              value: "http://ai-service:8081"
+            - name: GATEWAY_BACKEND_URL
+              value: "http://backend:8080"
+            - name: GATEWAY_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vigilantai-secrets
+                  key: GATEWAY_AUTH_TOKEN
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3

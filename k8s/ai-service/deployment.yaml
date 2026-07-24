@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+  namespace: vigilantai
+  labels:
+    app.kubernetes.io/name: ai-service
+    app.kubernetes.io/part-of: vigilantai
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ai-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ai-service
+        app.kubernetes.io/part-of: vigilantai
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: ai-service
+          image: vigilantai/ai-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+              protocol: TCP
+          env:
+            - name: AI_SERVICE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: vigilantai-config
+                  key: AI_SERVICE_HOST
+            - name: AI_SERVICE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: vigilantai-config
+                  key: AI_SERVICE_PORT
+            - name: AI_SERVICE_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: vigilantai-config
+                  key: AI_SERVICE_LOG_LEVEL
+            - name: AI_SERVICE_DEFAULT_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: vigilantai-config
+                  key: AI_SERVICE_DEFAULT_MODEL
+            - name: AI_SERVICE_DEVICE
+              valueFrom:
+                configMapKeyRef:
+                  name: vigilantai-config
+                  key: AI_SERVICE_DEVICE
+            - name: AI_SERVICE_AUTO_LOAD
+              valueFrom:
+                configMapKeyRef:
+                  name: vigilantai-config
+                  key: AI_SERVICE_AUTO_LOAD
+            - name: AI_SERVICE_CONFIDENCE_THRESHOLD
+              valueFrom:
+                configMapKeyRef:
+                  name: vigilantai-config
+                  key: AI_SERVICE_CONFIDENCE_THRESHOLD
+            - name: AI_SERVICE_IOU_THRESHOLD
+              valueFrom:
+                configMapKeyRef:
+                  name: vigilantai-config
+                  key: AI_SERVICE_IOU_THRESHOLD
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 45
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5

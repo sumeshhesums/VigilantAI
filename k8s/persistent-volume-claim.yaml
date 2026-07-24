@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vigilantai-postgres-pvc
+  namespace: vigilantai
+  labels:
+    app.kubernetes.io/part-of: vigilantai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vigilantai-redis-pvc
+  namespace: vigilantai
+  labels:
+    app.kubernetes.io/part-of: vigilantai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vigilantai-evidence-pvc
+  namespace: vigilantai
+  labels:
+    app.kubernetes.io/part-of: vigilantai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 50Gi
