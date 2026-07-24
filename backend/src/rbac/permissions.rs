@@ -37,6 +37,11 @@ pub enum Permission {
     EvidenceUpload,
     EvidenceDelete,
 
+    // Notification
+    NotificationView,
+    NotificationSend,
+    NotificationRetry,
+
     // Dashboard
     DashboardView,
 
@@ -65,6 +70,9 @@ impl Permission {
         Permission::EvidenceDownload,
         Permission::EvidenceUpload,
         Permission::EvidenceDelete,
+        Permission::NotificationView,
+        Permission::NotificationSend,
+        Permission::NotificationRetry,
         Permission::DashboardView,
         Permission::SystemAdmin,
     ];
@@ -90,6 +98,9 @@ impl Permission {
             Permission::EvidenceDownload => "evidence:download",
             Permission::EvidenceUpload => "evidence:upload",
             Permission::EvidenceDelete => "evidence:delete",
+            Permission::NotificationView => "notification:view",
+            Permission::NotificationSend => "notification:send",
+            Permission::NotificationRetry => "notification:retry",
             Permission::DashboardView => "dashboard:view",
             Permission::SystemAdmin => "system:admin",
         }
@@ -116,6 +127,9 @@ impl Permission {
             "evidence:download" => Some(Permission::EvidenceDownload),
             "evidence:upload" => Some(Permission::EvidenceUpload),
             "evidence:delete" => Some(Permission::EvidenceDelete),
+            "notification:view" => Some(Permission::NotificationView),
+            "notification:send" => Some(Permission::NotificationSend),
+            "notification:retry" => Some(Permission::NotificationRetry),
             "dashboard:view" => Some(Permission::DashboardView),
             "system:admin" => Some(Permission::SystemAdmin),
             _ => None,
@@ -168,6 +182,7 @@ pub fn default_permissions_for_role(role: Role) -> HashSet<Permission> {
                 Permission::RoleView,
                 Permission::RoleUpdate,
                 Permission::EvidenceDelete,
+                Permission::NotificationSend,
             ]);
             perms
         }
@@ -190,6 +205,7 @@ pub fn default_permissions_for_role(role: Role) -> HashSet<Permission> {
                 Permission::IncidentUpdate,
                 Permission::CameraUpdate,
                 Permission::EvidenceUpload,
+                Permission::NotificationRetry,
             ]);
             perms
         }
@@ -199,6 +215,7 @@ pub fn default_permissions_for_role(role: Role) -> HashSet<Permission> {
             Permission::CameraView,
             Permission::IncidentView,
             Permission::EvidenceView,
+            Permission::NotificationView,
         ]),
 
         Role::ApiIntegration => HashSet::from([
@@ -208,6 +225,8 @@ pub fn default_permissions_for_role(role: Role) -> HashSet<Permission> {
             Permission::IncidentCreate,
             Permission::EvidenceView,
             Permission::EvidenceUpload,
+            Permission::NotificationView,
+            Permission::NotificationSend,
         ]),
     }
 }
@@ -259,11 +278,12 @@ mod tests {
     #[test]
     fn test_viewer_has_minimal_permissions() {
         let perms = default_permissions_for_role(Role::Viewer);
-        assert_eq!(perms.len(), 4);
+        assert_eq!(perms.len(), 5);
         assert!(perms.contains(&Permission::DashboardView));
         assert!(perms.contains(&Permission::CameraView));
         assert!(perms.contains(&Permission::IncidentView));
         assert!(perms.contains(&Permission::EvidenceView));
+        assert!(perms.contains(&Permission::NotificationView));
         // Viewer should NOT have write permissions
         assert!(!perms.contains(&Permission::IncidentUpdate));
         assert!(!perms.contains(&Permission::CameraCreate));
@@ -278,6 +298,7 @@ mod tests {
         assert!(operator.contains(&Permission::IncidentUpdate));
         assert!(operator.contains(&Permission::CameraUpdate));
         assert!(operator.contains(&Permission::EvidenceUpload));
+        assert!(operator.contains(&Permission::NotificationRetry));
     }
 
     #[test]
@@ -298,18 +319,21 @@ mod tests {
         assert!(sec_admin.contains(&Permission::UserCreate));
         assert!(sec_admin.contains(&Permission::RoleUpdate));
         assert!(sec_admin.contains(&Permission::EvidenceDelete));
+        assert!(sec_admin.contains(&Permission::NotificationSend));
     }
 
     #[test]
     fn test_api_integration_independent() {
         let api = default_permissions_for_role(Role::ApiIntegration);
-        assert_eq!(api.len(), 6);
+        assert_eq!(api.len(), 8);
         assert!(api.contains(&Permission::CameraView));
         assert!(api.contains(&Permission::CameraCreate));
         assert!(api.contains(&Permission::IncidentView));
         assert!(api.contains(&Permission::IncidentCreate));
         assert!(api.contains(&Permission::EvidenceView));
         assert!(api.contains(&Permission::EvidenceUpload));
+        assert!(api.contains(&Permission::NotificationView));
+        assert!(api.contains(&Permission::NotificationSend));
     }
 
     #[test]
@@ -324,6 +348,6 @@ mod tests {
 
     #[test]
     fn test_permission_count() {
-        assert_eq!(Permission::ALL.len(), 20);
+        assert_eq!(Permission::ALL.len(), 23);
     }
 }

@@ -1,6 +1,7 @@
 pub mod camera_repository;
 pub mod evidence_repository;
 pub mod incident_repository;
+pub mod notification_repository;
 pub mod permission_repository;
 pub mod role_repository;
 pub mod user_repository;

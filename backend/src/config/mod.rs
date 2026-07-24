@@ -1,6 +1,7 @@
 pub mod database;
 pub mod evidence;
 pub mod jwt;
+pub mod notification;
 pub mod redis;
 pub mod server;
 
@@ -9,6 +10,7 @@ use anyhow::Result;
 use self::database::DatabaseConfig;
 use self::evidence::EvidenceConfig;
 pub use self::jwt::JwtConfig;
+use self::notification::NotificationConfig;
 use self::redis::RedisConfig;
 use self::server::ServerConfig;
 
@@ -19,6 +21,7 @@ pub struct AppConfig {
     pub redis: RedisConfig,
     pub jwt: JwtConfig,
     pub evidence: EvidenceConfig,
+    pub notification: NotificationConfig,
 }
 
 impl AppConfig {
@@ -30,6 +33,7 @@ impl AppConfig {
         let redis = RedisConfig::from_env()?;
         let jwt = JwtConfig::from_env()?;
         let evidence = EvidenceConfig::from_env()?;
+        let notification = NotificationConfig::from_env()?;
 
         Ok(Self {
             server,
@@ -37,6 +41,7 @@ impl AppConfig {
             redis,
             jwt,
             evidence,
+            notification,
         })
     }
 

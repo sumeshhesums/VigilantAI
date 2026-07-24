@@ -77,6 +77,13 @@ mod tests {
                 storage_path: "./evidence".to_string(),
                 max_file_size: 20971520,
             },
+            notification: crate::config::notification::NotificationConfig {
+                enabled: true,
+                webhook_url: String::new(),
+                webhook_timeout_secs: 10,
+                email_enabled: false,
+                max_retries: 3,
+            },
         };
 
         // connect_lazy creates a pool that does NOT connect until first query

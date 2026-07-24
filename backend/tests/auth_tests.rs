@@ -8,6 +8,7 @@ use backend::app;
 use backend::config::database::DatabaseConfig;
 use backend::config::evidence::EvidenceConfig;
 use backend::config::jwt::JwtConfig;
+use backend::config::notification::NotificationConfig;
 use backend::config::redis::RedisConfig;
 use backend::config::server::ServerConfig;
 use backend::config::AppConfig;
@@ -68,6 +69,13 @@ async fn setup() -> (PgPool, AppState) {
         evidence: EvidenceConfig {
             storage_path: "./evidence".to_string(),
             max_file_size: 20_971_520,
+        },
+        notification: NotificationConfig {
+            enabled: true,
+            webhook_url: String::new(),
+            webhook_timeout_secs: 10,
+            email_enabled: false,
+            max_retries: 3,
         },
     };
 
@@ -629,6 +637,13 @@ async fn test_register_validation_missing_fields() {
             storage_path: "./evidence".to_string(),
             max_file_size: 20_971_520,
         },
+        notification: NotificationConfig {
+            enabled: true,
+            webhook_url: String::new(),
+            webhook_timeout_secs: 10,
+            email_enabled: false,
+            max_retries: 3,
+        },
     };
     let redis_client =
         redis::Client::open(config.redis.url.clone()).expect("failed to create redis client");
@@ -683,6 +698,13 @@ async fn test_login_validation_missing_fields() {
         evidence: EvidenceConfig {
             storage_path: "./evidence".to_string(),
             max_file_size: 20_971_520,
+        },
+        notification: NotificationConfig {
+            enabled: true,
+            webhook_url: String::new(),
+            webhook_timeout_secs: 10,
+            email_enabled: false,
+            max_retries: 3,
         },
     };
     let redis_client =
