@@ -1,187 +1,202 @@
-"""Model manager for AI inference models."""
+"""Model manager for AI inference models.
 
-import time
-from dataclasses import dataclass
-from enum import Enum
+Supports multiple models with an active model concept.
+"""
+
+from typing import Any
 
 from app.logging import get_logger
+from app.models.base import BaseModel, ModelMetadata, ModelState
+from app.models.loader import ModelLoader
+from app.models.registry import ModelRegistry
 
 logger = get_logger(__name__)
 
 
-class ModelState(str, Enum):
-    """Model loading state."""
-
-    NOT_LOADED = "not_loaded"
-    LOADING = "loading"
-    LOADED = "loaded"
-    ERROR = "error"
-
-
-@dataclass
-class ModelMetadata:
-    """Metadata for a loaded model."""
-
-    name: str
-    version: str
-    device: str
-    state: ModelState = ModelState.NOT_LOADED
-    loaded_at: float | None = None
-    load_duration_seconds: float | None = None
-    input_shape: list[int] | None = None
-    class_count: int | None = None
-    error_message: str | None = None
-
-
 class ModelManager:
-    """Manages AI model lifecycle (load/unload/reload/status)."""
+    """High-level model manager supporting multiple models.
 
-    def __init__(self, model_name: str, model_version: str, device: str) -> None:
-        self._model_name = model_name
-        self._model_version = model_version
-        self._device = device
-        self._metadata = ModelMetadata(
-            name=model_name,
-            version=model_version,
-            device=device,
-        )
-        self._loaded_models: dict[str, ModelMetadata] = {}
+    Wraps ModelRegistry and ModelLoader to provide a unified
+    interface for multi-model management with active model tracking.
+    """
+
+    def __init__(
+        self,
+        registry: ModelRegistry,
+        loader: ModelLoader,
+        default_model_name: str | None = None,
+    ) -> None:
+        self._registry = registry
+        self._loader = loader
+        self._active_model_name: str | None = default_model_name
 
     @property
-    def metadata(self) -> ModelMetadata:
-        """Get current model metadata."""
-        return self._metadata
+    def active_model_name(self) -> str | None:
+        """Get the name of the currently active model."""
+        return self._active_model_name
+
+    @property
+    def active_model(self) -> BaseModel | None:
+        """Get the currently active model instance."""
+        if self._active_model_name is None:
+            return None
+        try:
+            return self._registry.get_model(self._active_model_name)
+        except KeyError:
+            return None
+
+    @property
+    def registry(self) -> ModelRegistry:
+        """Access the underlying model registry."""
+        return self._registry
+
+    @property
+    def loader(self) -> ModelLoader:
+        """Access the underlying model loader."""
+        return self._loader
+
+    def set_active_model(self, name: str) -> None:
+        """Set the active model by name.
+
+        Args:
+            name: Name of the model to set as active.
+
+        Raises:
+            KeyError: If model not found in registry.
+        """
+        if not self._registry.has_model(name):
+            raise KeyError(f"Model '{name}' not found in registry")
+        self._active_model_name = name
+        logger.info("Active model set to: %s", name)
+
+    async def switch_model(self, name: str) -> dict[str, Any]:
+        """Switch to a different model.
+
+        Loads the target model if not already loaded, then sets it active.
+
+        Args:
+            name: Name of the model to switch to.
+
+        Returns:
+            Metadata dictionary of the new active model.
+
+        Raises:
+            KeyError: If model not found in registry.
+        """
+        if not self._registry.has_model(name):
+            raise KeyError(f"Model '{name}' not found in registry")
+
+        model = self._registry.get_model(name)
+        if not model.is_loaded:
+            await model.load()
+
+        self._active_model_name = name
+        logger.info("Switched active model to: %s", name)
+        return model.metadata.to_dict()
+
+    async def load_by_name(self, name: str) -> dict[str, Any]:
+        """Load a model by name.
+
+        Args:
+            name: Name of the model to load.
+
+        Returns:
+            Model metadata dictionary.
+        """
+        return await self._loader.load_model(name)
+
+    async def unload_by_name(self, name: str) -> None:
+        """Unload a model by name.
+
+        If this is the active model, clears the active model.
+
+        Args:
+            name: Name of the model to unload.
+        """
+        await self._loader.unload_model(name)
+        if self._active_model_name == name:
+            self._active_model_name = None
+            logger.info("Cleared active model (was %s)", name)
+
+    async def reload_by_name(self, name: str) -> dict[str, Any]:
+        """Reload a model by name.
+
+        Args:
+            name: Name of the model to reload.
+
+        Returns:
+            Model metadata dictionary after reload.
+        """
+        return await self._loader.reload_model(name)
+
+    def get_status(self, name: str) -> dict[str, Any]:
+        """Get status of a specific model.
+
+        Args:
+            name: Name of the model.
+
+        Returns:
+            Model status dictionary.
+        """
+        return self._loader.get_model_status(name)
+
+    def get_all_statuses(self) -> dict[str, dict[str, Any]]:
+        """Get status of all registered models.
+
+        Returns:
+            Dictionary mapping model names to status.
+        """
+        return self._loader.get_all_statuses()
+
+    def list_models(self) -> dict[str, dict[str, Any]]:
+        """List all registered models with metadata.
+
+        Returns:
+            Dictionary mapping model names to metadata.
+        """
+        return self._registry.list_models()
+
+    # --- Legacy single-model interface for backward compatibility ---
+
+    def get_model_info(self) -> dict[str, Any]:
+        """Get active model info for health checks.
+
+        Returns:
+            Dictionary with model info, falling back to defaults.
+        """
+        model = self.active_model
+        if model is not None:
+            return {
+                "name": model.metadata.name,
+                "version": model.metadata.version,
+                "status": model.metadata.state.value,
+                "device": model.metadata.device,
+                "input_shape": model.metadata.input_shape,
+                "class_count": model.metadata.class_count,
+            }
+        return {
+            "name": "unknown",
+            "version": "0.0.0",
+            "status": ModelState.NOT_LOADED.value,
+            "device": "cpu",
+            "input_shape": None,
+            "class_count": None,
+        }
 
     @property
     def is_loaded(self) -> bool:
-        """Check if model is loaded."""
-        return self._metadata.state == ModelState.LOADED
+        """Check if the active model is loaded."""
+        model = self.active_model
+        return model is not None and model.is_loaded
 
-    async def load_model(self) -> ModelMetadata:
-        """Load the AI model.
-
-        Returns:
-            ModelMetadata with updated state after loading.
-        """
-        if self._metadata.state == ModelState.LOADED:
-            logger.info(
-                "Model %s v%s already loaded",
-                self._model_name,
-                self._model_version,
-            )
-            return self._metadata
-
-        self._metadata.state = ModelState.LOADING
-        self._metadata.error_message = None
-
-        start_time = time.time()
-
-        try:
-            # Placeholder: In production, load actual model here
-            # e.g., model = load_yolo_model(self._model_name, self._device)
-            await self._placeholder_load()
-
-            self._metadata.state = ModelState.LOADED
-            self._metadata.loaded_at = time.time()
-            self._metadata.load_duration_seconds = time.time() - start_time
-            self._metadata.input_shape = [1, 3, 640, 640]
-            self._metadata.class_count = 80
-
-            self._loaded_models[self._model_name] = self._metadata
-
-            logger.info(
-                "Model %s v%s loaded in %.2f seconds",
-                self._model_name,
-                self._model_version,
-                self._metadata.load_duration_seconds,
-            )
-
-        except Exception as e:
-            self._metadata.state = ModelState.ERROR
-            self._metadata.error_message = str(e)
-            logger.error("Failed to load model %s: %s", self._model_name, e)
-
-        return self._metadata
-
-    async def unload_model(self) -> None:
-        """Unload the AI model."""
-        if self._metadata.state != ModelState.LOADED:
-            logger.warning("Model %s is not loaded, cannot unload", self._model_name)
-            return
-
-        # Placeholder: In production, unload model from GPU memory
-        self._metadata.state = ModelState.NOT_LOADED
-        self._metadata.loaded_at = None
-        self._metadata.load_duration_seconds = None
-        self._metadata.input_shape = None
-        self._metadata.class_count = None
-        self._metadata.error_message = None
-
-        self._loaded_models.pop(self._model_name, None)
-
-        logger.info("Model %s unloaded", self._model_name)
-
-    async def reload_model(self) -> ModelMetadata:
-        """Reload the AI model.
-
-        Returns:
-            ModelMetadata with updated state after reload.
-        """
-        logger.info("Reloading model %s", self._model_name)
-        await self.unload_model()
-        return await self.load_model()
-
-    def get_status(self) -> dict:
-        """Get current model status.
-
-        Returns:
-            Dictionary with model status information.
-        """
-        return {
-            "name": self._metadata.name,
-            "version": self._metadata.version,
-            "status": self._metadata.state.value,
-            "device": self._metadata.device,
-            "input_shape": self._metadata.input_shape,
-            "class_count": self._metadata.class_count,
-            "loaded_at": self._metadata.loaded_at,
-            "load_duration_seconds": self._metadata.load_duration_seconds,
-            "error_message": self._metadata.error_message,
-        }
-
-    def get_model_info(self) -> dict:
-        """Get model information for health checks.
-
-        Returns:
-            Dictionary with model info.
-        """
-        return {
-            "name": self._metadata.name,
-            "version": self._metadata.version,
-            "status": self._metadata.state.value,
-            "device": self._metadata.device,
-            "input_shape": self._metadata.input_shape,
-            "class_count": self._metadata.class_count,
-        }
-
-    def get_loaded_models(self) -> dict[str, ModelMetadata]:
-        """Get all loaded models.
-
-        Returns:
-            Dictionary of loaded model metadata.
-        """
-        return self._loaded_models.copy()
-
-    async def _placeholder_load(self) -> None:
-        """Placeholder for actual model loading logic.
-
-        In production, replace with actual model loading:
-        - from ultralytics import YOLO
-        - model = YOLO(self._model_name)
-        - model.to(self._device)
-        """
-        # Simulate model loading time
-        import asyncio
-
-        await asyncio.sleep(0.1)  # Simulated load time
-        logger.debug("Placeholder model load completed")
+    @property
+    def metadata(self) -> ModelMetadata:
+        """Get active model metadata (legacy compat)."""
+        model = self.active_model
+        if model is not None:
+            return model.metadata
+        return ModelMetadata(
+            name="unknown",
+            version="0.0.0",
+            model_type="unknown",
+        )

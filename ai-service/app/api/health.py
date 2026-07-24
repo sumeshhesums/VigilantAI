@@ -1,6 +1,6 @@
 """Health check endpoint."""
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
 from app.config import get_settings
 from app.core.metrics import MetricsManager
@@ -18,74 +18,56 @@ from app.schemas.health import (
 router = APIRouter(tags=["health"])
 logger = get_logger(__name__)
 
+_STATE_TO_STATUS = {
+    "loaded": ModelStatus.LOADED,
+    "not_loaded": ModelStatus.NOT_LOADED,
+    "loading": ModelStatus.LOADING,
+    "error": ModelStatus.ERROR,
+}
 
-def _get_model_status(model_manager: ModelManager) -> ModelStatus:
-    """Map model state to ModelStatus enum."""
-    from app.core.model_manager import ModelState
 
-    state_map = {
-        ModelState.LOADED: ModelStatus.LOADED,
-        ModelState.NOT_LOADED: ModelStatus.NOT_LOADED,
-        ModelState.LOADING: ModelStatus.LOADING,
-        ModelState.ERROR: ModelStatus.ERROR,
-    }
-    return state_map.get(model_manager.metadata.state, ModelStatus.NOT_LOADED)
+def _build_model_info(model_manager: ModelManager) -> ModelInfo:
+    """Build ModelInfo from the active model."""
+    info = model_manager.get_model_info()
+    status_raw = info.get("status", "not_loaded")
+    return ModelInfo(
+        name=info["name"],
+        version=info["version"],
+        status=_STATE_TO_STATUS.get(status_raw, ModelStatus.NOT_LOADED),
+        device=info["device"],
+        input_shape=info.get("input_shape"),
+        class_count=info.get("class_count"),
+    )
 
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check(
-    request: Request,
     model_manager: ModelManager = Depends(get_model_manager),
     metrics_manager: MetricsManager = Depends(get_metrics_manager),
 ) -> HealthResponse:
-    """Basic health check endpoint.
-
-    Returns service status, version, uptime, and model info.
-    """
+    """Basic health check endpoint."""
     settings = get_settings()
-    model_info = model_manager.get_model_info()
-
     return HealthResponse(
         status=ServiceStatus.HEALTHY,
         version=settings.SERVICE_VERSION,
         uptime_seconds=metrics_manager.uptime_seconds,
-        model=ModelInfo(
-            name=model_info["name"],
-            version=model_info["version"],
-            status=_get_model_status(model_manager),
-            device=model_info["device"],
-            input_shape=model_info.get("input_shape"),
-            class_count=model_info.get("class_count"),
-        ),
+        model=_build_model_info(model_manager),
     )
 
 
 @router.get("/health/detailed", response_model=DetailedHealthResponse)
 async def detailed_health_check(
-    request: Request,
     model_manager: ModelManager = Depends(get_model_manager),
     metrics_manager: MetricsManager = Depends(get_metrics_manager),
 ) -> DetailedHealthResponse:
-    """Detailed health check with request metrics.
-
-    Returns service status, version, uptime, model info, and request metrics.
-    """
+    """Detailed health check with request metrics."""
     settings = get_settings()
     snapshot = metrics_manager.get_snapshot()
-    model_info = model_manager.get_model_info()
-
     return DetailedHealthResponse(
         status=ServiceStatus.HEALTHY,
         version=settings.SERVICE_VERSION,
         uptime_seconds=snapshot.uptime_seconds,
-        model=ModelInfo(
-            name=model_info["name"],
-            version=model_info["version"],
-            status=_get_model_status(model_manager),
-            device=model_info["device"],
-            input_shape=model_info.get("input_shape"),
-            class_count=model_info.get("class_count"),
-        ),
+        model=_build_model_info(model_manager),
         request_count=snapshot.request_count,
         successful_requests=snapshot.successful_requests,
         failed_requests=snapshot.failed_requests,

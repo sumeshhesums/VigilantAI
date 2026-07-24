@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,12 +22,19 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
 
-    # Model settings
+    # Model settings (legacy single-model)
     MODEL_NAME: str = "yolov8n"
     MODEL_VERSION: str = "1.0.0"
     DEVICE: str = "cpu"
     MAX_BATCH_SIZE: int = 16
     MAX_IMAGE_SIZE: int = 1920
+
+    # Multi-model framework settings
+    DEFAULT_MODEL: str = "yolov8n"
+    AVAILABLE_MODELS: list[str] = Field(
+        default_factory=lambda: ["yolov8n", "rtdetr-l", "grounding-dino-tiny"]
+    )
+    AUTO_LOAD: bool = True
 
     # Request settings
     REQUEST_TIMEOUT: float = 30.0
