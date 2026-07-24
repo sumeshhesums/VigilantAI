@@ -1,10 +1,12 @@
 pub mod camera;
+pub mod evidence;
 pub mod incident;
 pub mod permission;
 pub mod role;
 pub mod user;
 
 pub use camera::*;
+pub use evidence::*;
 pub use incident::*;
 pub use permission::*;
 pub use role::*;

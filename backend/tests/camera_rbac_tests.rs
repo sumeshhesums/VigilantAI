@@ -6,6 +6,7 @@ use tower::ServiceExt;
 
 use backend::app;
 use backend::config::database::DatabaseConfig;
+use backend::config::evidence::EvidenceConfig;
 use backend::config::jwt::JwtConfig;
 use backend::config::redis::RedisConfig;
 use backend::config::server::ServerConfig;
@@ -74,6 +75,10 @@ async fn setup() -> (PgPool, AppState) {
             url: "redis://127.0.0.1:6379".to_string(),
         },
         jwt: test_jwt_config(),
+        evidence: EvidenceConfig {
+            storage_path: "./evidence".to_string(),
+            max_file_size: 20_971_520,
+        },
     };
 
     let redis_client =

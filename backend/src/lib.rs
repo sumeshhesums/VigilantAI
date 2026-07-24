@@ -14,4 +14,5 @@ pub mod security;
 pub mod services;
 pub mod startup;
 pub mod state;
+pub mod storage;
 pub mod telemetry;

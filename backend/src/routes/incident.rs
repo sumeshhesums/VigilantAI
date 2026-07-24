@@ -1,6 +1,7 @@
 use axum::routing::get;
 use axum::Router;
 
+use crate::handlers::evidence;
 use crate::handlers::incident;
 use crate::state::AppState;
 
@@ -13,5 +14,9 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/{id}",
             get(incident::get_incident).patch(incident::update_incident),
+        )
+        .route(
+            "/{id}/evidence",
+            get(evidence::list_evidence).post(evidence::upload_evidence),
         )
 }

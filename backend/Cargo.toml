@@ -24,6 +24,10 @@ tower = { version = "0.5", features = ["util"] }
 argon2.workspace = true
 jsonwebtoken.workspace = true
 axum-extra.workspace = true
+sha2 = "0.10"
+image = "0.25"
+bytes = "1"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
+tempfile = "3"

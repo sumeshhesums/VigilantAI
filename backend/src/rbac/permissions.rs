@@ -34,6 +34,8 @@ pub enum Permission {
     // Evidence
     EvidenceView,
     EvidenceDownload,
+    EvidenceUpload,
+    EvidenceDelete,
 
     // Dashboard
     DashboardView,
@@ -61,6 +63,8 @@ impl Permission {
         Permission::IncidentClose,
         Permission::EvidenceView,
         Permission::EvidenceDownload,
+        Permission::EvidenceUpload,
+        Permission::EvidenceDelete,
         Permission::DashboardView,
         Permission::SystemAdmin,
     ];
@@ -84,6 +88,8 @@ impl Permission {
             Permission::IncidentClose => "incident:close",
             Permission::EvidenceView => "evidence:view",
             Permission::EvidenceDownload => "evidence:download",
+            Permission::EvidenceUpload => "evidence:upload",
+            Permission::EvidenceDelete => "evidence:delete",
             Permission::DashboardView => "dashboard:view",
             Permission::SystemAdmin => "system:admin",
         }
@@ -108,6 +114,8 @@ impl Permission {
             "incident:close" => Some(Permission::IncidentClose),
             "evidence:view" => Some(Permission::EvidenceView),
             "evidence:download" => Some(Permission::EvidenceDownload),
+            "evidence:upload" => Some(Permission::EvidenceUpload),
+            "evidence:delete" => Some(Permission::EvidenceDelete),
             "dashboard:view" => Some(Permission::DashboardView),
             "system:admin" => Some(Permission::SystemAdmin),
             _ => None,
@@ -159,6 +167,7 @@ pub fn default_permissions_for_role(role: Role) -> HashSet<Permission> {
                 Permission::UserDelete,
                 Permission::RoleView,
                 Permission::RoleUpdate,
+                Permission::EvidenceDelete,
             ]);
             perms
         }
@@ -177,7 +186,11 @@ pub fn default_permissions_for_role(role: Role) -> HashSet<Permission> {
 
         Role::Operator => {
             let mut perms = default_permissions_for_role(Role::Viewer);
-            perms.extend([Permission::IncidentUpdate, Permission::CameraUpdate]);
+            perms.extend([
+                Permission::IncidentUpdate,
+                Permission::CameraUpdate,
+                Permission::EvidenceUpload,
+            ]);
             perms
         }
 
@@ -194,6 +207,7 @@ pub fn default_permissions_for_role(role: Role) -> HashSet<Permission> {
             Permission::IncidentView,
             Permission::IncidentCreate,
             Permission::EvidenceView,
+            Permission::EvidenceUpload,
         ]),
     }
 }
@@ -263,6 +277,7 @@ mod tests {
         assert!(operator.is_superset(&viewer));
         assert!(operator.contains(&Permission::IncidentUpdate));
         assert!(operator.contains(&Permission::CameraUpdate));
+        assert!(operator.contains(&Permission::EvidenceUpload));
     }
 
     #[test]
@@ -282,17 +297,19 @@ mod tests {
         assert!(sec_admin.is_superset(&analyst));
         assert!(sec_admin.contains(&Permission::UserCreate));
         assert!(sec_admin.contains(&Permission::RoleUpdate));
+        assert!(sec_admin.contains(&Permission::EvidenceDelete));
     }
 
     #[test]
     fn test_api_integration_independent() {
         let api = default_permissions_for_role(Role::ApiIntegration);
-        assert_eq!(api.len(), 5);
+        assert_eq!(api.len(), 6);
         assert!(api.contains(&Permission::CameraView));
         assert!(api.contains(&Permission::CameraCreate));
         assert!(api.contains(&Permission::IncidentView));
         assert!(api.contains(&Permission::IncidentCreate));
         assert!(api.contains(&Permission::EvidenceView));
+        assert!(api.contains(&Permission::EvidenceUpload));
     }
 
     #[test]
@@ -307,6 +324,6 @@ mod tests {
 
     #[test]
     fn test_permission_count() {
-        assert_eq!(Permission::ALL.len(), 18);
+        assert_eq!(Permission::ALL.len(), 20);
     }
 }

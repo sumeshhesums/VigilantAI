@@ -73,6 +73,10 @@ mod tests {
                 url: "redis://127.0.0.1:6379".to_string(),
             },
             jwt: test_jwt_config(),
+            evidence: crate::config::evidence::EvidenceConfig {
+                storage_path: "./evidence".to_string(),
+                max_file_size: 20971520,
+            },
         };
 
         // connect_lazy creates a pool that does NOT connect until first query

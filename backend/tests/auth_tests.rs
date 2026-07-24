@@ -6,6 +6,7 @@ use tower::ServiceExt;
 
 use backend::app;
 use backend::config::database::DatabaseConfig;
+use backend::config::evidence::EvidenceConfig;
 use backend::config::jwt::JwtConfig;
 use backend::config::redis::RedisConfig;
 use backend::config::server::ServerConfig;
@@ -64,6 +65,10 @@ async fn setup() -> (PgPool, AppState) {
             url: "redis://127.0.0.1:6379".to_string(),
         },
         jwt: test_jwt_config(),
+        evidence: EvidenceConfig {
+            storage_path: "./evidence".to_string(),
+            max_file_size: 20_971_520,
+        },
     };
 
     let redis_client =
@@ -620,6 +625,10 @@ async fn test_register_validation_missing_fields() {
             url: "redis://127.0.0.1:6379".to_string(),
         },
         jwt: test_jwt_config(),
+        evidence: EvidenceConfig {
+            storage_path: "./evidence".to_string(),
+            max_file_size: 20_971_520,
+        },
     };
     let redis_client =
         redis::Client::open(config.redis.url.clone()).expect("failed to create redis client");
@@ -671,6 +680,10 @@ async fn test_login_validation_missing_fields() {
             url: "redis://127.0.0.1:6379".to_string(),
         },
         jwt: test_jwt_config(),
+        evidence: EvidenceConfig {
+            storage_path: "./evidence".to_string(),
+            max_file_size: 20_971_520,
+        },
     };
     let redis_client =
         redis::Client::open(config.redis.url.clone()).expect("failed to create redis client");
