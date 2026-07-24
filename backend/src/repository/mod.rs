@@ -1,3 +1,4 @@
+pub mod camera_repository;
 pub mod permission_repository;
 pub mod role_repository;
 pub mod user_repository;
@@ -5,7 +6,10 @@ pub mod user_repository;
 use async_trait::async_trait;
 use sqlx::postgres::PgPool;
 
-use crate::models::{CreatePermission, CreateRole, CreateUser, Permission, Role, UpdateUser, User};
+use crate::models::{
+    Camera, CreateCamera, CreatePermission, CreateRole, CreateUser, Permission, Role, UpdateCamera,
+    UpdateUser, User,
+};
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {
@@ -63,4 +67,32 @@ pub trait PermissionRepository: Send + Sync {
     ) -> anyhow::Result<Permission>;
     async fn find_by_name(&self, pool: &PgPool, name: &str) -> anyhow::Result<Option<Permission>>;
     async fn list(&self, pool: &PgPool) -> anyhow::Result<Vec<Permission>>;
+}
+
+#[async_trait]
+pub trait CameraRepository: Send + Sync {
+    async fn create(&self, pool: &PgPool, camera: &CreateCamera) -> anyhow::Result<Camera>;
+    async fn find_by_id(&self, pool: &PgPool, id: uuid::Uuid) -> anyhow::Result<Option<Camera>>;
+    async fn find_by_name(&self, pool: &PgPool, name: &str) -> anyhow::Result<Option<Camera>>;
+    async fn find_by_rtsp_url(
+        &self,
+        pool: &PgPool,
+        rtsp_url: &str,
+    ) -> anyhow::Result<Option<Camera>>;
+    async fn list(&self, pool: &PgPool) -> anyhow::Result<Vec<Camera>>;
+    async fn update(
+        &self,
+        pool: &PgPool,
+        id: uuid::Uuid,
+        camera: &UpdateCamera,
+    ) -> anyhow::Result<Option<Camera>>;
+    async fn delete(&self, pool: &PgPool, id: uuid::Uuid) -> anyhow::Result<bool>;
+    async fn enable(&self, pool: &PgPool, id: uuid::Uuid) -> anyhow::Result<Option<Camera>>;
+    async fn disable(&self, pool: &PgPool, id: uuid::Uuid) -> anyhow::Result<Option<Camera>>;
+    async fn update_last_seen(
+        &self,
+        pool: &PgPool,
+        id: uuid::Uuid,
+    ) -> anyhow::Result<Option<Camera>>;
+    async fn count(&self, pool: &PgPool) -> anyhow::Result<i64>;
 }
