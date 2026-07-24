@@ -2,6 +2,7 @@ pub mod admin;
 pub mod auth;
 pub mod camera;
 pub mod health;
+pub mod incident;
 pub mod user;
 
 use crate::state::AppState;
@@ -13,5 +14,6 @@ pub fn routes() -> Router<AppState> {
         .nest("/api/v1/admin", admin::routes())
         .nest("/api/v1/users", user::routes())
         .nest("/api/v1/cameras", camera::routes())
+        .nest("/api/v1/incidents", incident::routes())
         .nest("/api/v1", health::routes())
 }
