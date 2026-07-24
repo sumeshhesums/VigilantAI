@@ -60,8 +60,13 @@ pub struct HealthResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GatewayConfig;
     use crate::gateway::manager::GatewayManager;
     use crate::models::Camera;
+
+    fn test_config() -> GatewayConfig {
+        GatewayConfig::default()
+    }
 
     fn test_camera(name: &str, enabled: bool) -> Camera {
         Camera {
@@ -91,15 +96,15 @@ mod tests {
     #[tokio::test]
     async fn test_health_with_cameras() {
         let state = Arc::new(GatewayState::new());
-        let manager = GatewayManager::new(Arc::clone(&state));
+        let manager = GatewayManager::new(Arc::clone(&state), test_config());
 
         let cam1 = test_camera("online-cam", true);
         let cam2 = test_camera("offline-cam", true);
         let cam3 = test_camera("disabled-cam", false);
 
-        manager.register_camera(cam1.clone()).await;
-        manager.register_camera(cam2.clone()).await;
-        manager.register_camera(cam3.clone()).await;
+        manager.register_camera(cam1.clone()).await.unwrap();
+        manager.register_camera(cam2.clone()).await.unwrap();
+        manager.register_camera(cam3.clone()).await.unwrap();
 
         manager.start_worker(cam1.id).await;
         // cam2 stays offline, cam3 stays offline (disabled)
