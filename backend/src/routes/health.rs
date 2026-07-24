@@ -33,9 +33,32 @@ mod tests {
 
     use crate::app;
     use crate::config::database::DatabaseConfig;
+    use crate::config::jwt::JwtConfig;
     use crate::config::redis::RedisConfig;
     use crate::config::server::ServerConfig;
     use crate::config::AppConfig;
+    use crate::security::Security;
+
+    fn test_jwt_config() -> JwtConfig {
+        let private_key = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/test_private_key.pem"
+        ))
+        .expect("failed to read test private key");
+
+        let public_key = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/test_public_key.pem"
+        ))
+        .expect("failed to read test public key");
+
+        JwtConfig {
+            private_key,
+            public_key,
+            access_token_expiry_secs: 900,
+            refresh_token_expiry_secs: 604800,
+        }
+    }
 
     fn test_state() -> crate::state::AppState {
         let config = AppConfig {
@@ -49,6 +72,7 @@ mod tests {
             redis: RedisConfig {
                 url: "redis://127.0.0.1:6379".to_string(),
             },
+            jwt: test_jwt_config(),
         };
 
         // connect_lazy creates a pool that does NOT connect until first query
@@ -61,10 +85,13 @@ mod tests {
         let redis_client =
             redis::Client::open(config.redis.url.clone()).expect("failed to create redis client");
 
+        let security = Security::from_config(&config.jwt).expect("failed to create security");
+
         crate::state::AppState {
             config,
             postgres_pool,
             redis_client,
+            security,
         }
     }
 

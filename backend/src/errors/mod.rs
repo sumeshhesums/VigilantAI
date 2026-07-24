@@ -6,6 +6,15 @@ use serde_json::json;
 pub enum AppError {
     #[error("Internal server error")]
     Internal(#[from] anyhow::Error),
+
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
+
+    #[error("Invalid token: {0}")]
+    InvalidToken(String),
+
+    #[error("User not found")]
+    NotFound,
 }
 
 impl IntoResponse for AppError {
@@ -18,6 +27,9 @@ impl IntoResponse for AppError {
                     "Internal server error".to_string(),
                 )
             }
+            AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg.clone()),
+            AppError::InvalidToken(msg) => (StatusCode::UNAUTHORIZED, msg.clone()),
+            AppError::NotFound => (StatusCode::NOT_FOUND, "Resource not found".to_string()),
         };
 
         let body = axum::Json(json!({

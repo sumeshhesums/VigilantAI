@@ -8,6 +8,7 @@ pub mod middleware;
 pub mod models;
 pub mod repository;
 pub mod routes;
+pub mod security;
 pub mod services;
 pub mod startup;
 pub mod state;
