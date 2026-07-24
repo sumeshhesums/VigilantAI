@@ -1,4 +1,4 @@
-.PHONY: help build build-backend build-gateway test test-backend test-gateway lint fmt check dev infra-up infra-down clean
+.PHONY: help build build-backend build-gateway test test-backend test-gateway lint fmt check dev infra-up infra-down clean docker-build docker-up docker-down docker-logs docker-restart docker-ps docker-clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -41,18 +41,37 @@ check: fmt lint test ## Run format check, lint, and tests
 dev: infra-up ## Start infrastructure and build services
 	@echo "Infrastructure is running. Start services in their respective directories."
 
-# ── Infrastructure ─────────────────────────────────────
+# ── Infrastructure (infra only) ───────────────────────
 
 infra-up: ## Start PostgreSQL and Redis via Docker Compose
-	docker compose up -d
+	docker compose up -d postgres redis
 
 infra-down: ## Stop infrastructure services
 	docker compose down
 
 infra-logs: ## Tail infrastructure logs
+	docker compose logs -f postgres redis
+
+# ── Docker (full stack) ───────────────────────────────
+
+docker-build: ## Build all Docker images
+	docker compose build
+
+docker-up: ## Start all services
+	docker compose up -d
+
+docker-down: ## Stop all services
+	docker compose down
+
+docker-logs: ## Tail all service logs
 	docker compose logs -f
 
-# ── Clean ──────────────────────────────────────────────
+docker-restart: ## Restart all services
+	docker compose restart
 
-clean: ## Remove build artifacts
+docker-ps: ## Show running services status
+	docker compose ps
+
+docker-clean: ## Stop all services and remove volumes
+	docker compose down -v
 	cargo clean

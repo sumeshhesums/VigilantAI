@@ -1,0 +1,15 @@
+target
+.git
+.github
+dashboard/node_modules
+dashboard/.next
+ai-service/venv
+ai-service/.venv
+ai-service/__pycache__
+ai-service/.pytest_cache
+ai-service/.ruff_cache
+docs
+deploy
+scripts
+tests
+*.md

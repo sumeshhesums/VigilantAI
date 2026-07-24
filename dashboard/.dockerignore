@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.gitignore
+__tests__
+*.md
+.env
+.env.local
+.env.*.local
+.eslintrc.json
+jest.config.ts
+jest.setup.ts
+coverage

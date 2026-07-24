@@ -1,24 +1,28 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: vigilant
-      POSTGRES_PASSWORD: vigilant_dev
-      POSTGRES_DB: vigilantai
+      POSTGRES_USER: ${POSTGRES_USER:-vigilant}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-vigilantai}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vigilant -d vigilantai"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vigilant} -d ${POSTGRES_DB:-vigilantai}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - vigilant-net
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -26,7 +30,130 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - vigilant-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    environment:
+      BACKEND_HOST: ${BACKEND_HOST:-0.0.0.0}
+      BACKEND_PORT: ${BACKEND_PORT:-8080}
+      DATABASE_URL: ${DATABASE_URL:-postgres://vigilant:changeme@postgres:5432/vigilantai}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      RUST_LOG: ${RUST_LOG:-backend=info,tower_http=info}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      JWT_ACCESS_TOKEN_EXPIRY_SECS: ${JWT_ACCESS_TOKEN_EXPIRY_SECS:-900}
+      JWT_REFRESH_TOKEN_EXPIRY_SECS: ${JWT_REFRESH_TOKEN_EXPIRY_SECS:-604800}
+      EVIDENCE_STORAGE_PATH: ${EVIDENCE_STORAGE_PATH:-/data/evidence}
+      EVIDENCE_MAX_FILE_SIZE: ${EVIDENCE_MAX_FILE_SIZE:-20971520}
+      NOTIFICATION_ENABLED: ${NOTIFICATION_ENABLED:-true}
+      NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
+      NOTIFICATION_WEBHOOK_TIMEOUT_SECS: ${NOTIFICATION_WEBHOOK_TIMEOUT_SECS:-10}
+      NOTIFICATION_EMAIL_ENABLED: ${NOTIFICATION_EMAIL_ENABLED:-false}
+      NOTIFICATION_MAX_RETRIES: ${NOTIFICATION_MAX_RETRIES:-3}
+    volumes:
+      - evidence_data:/data/evidence
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - vigilant-net
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${AI_SERVICE_PORT:-8081}:8081"
+    environment:
+      AI_SERVICE_HOST: ${AI_SERVICE_HOST:-0.0.0.0}
+      AI_SERVICE_PORT: ${AI_SERVICE_PORT:-8081}
+      AI_SERVICE_LOG_LEVEL: ${AI_SERVICE_LOG_LEVEL:-INFO}
+      AI_SERVICE_DEFAULT_MODEL: ${AI_SERVICE_DEFAULT_MODEL:-yolov8n}
+      AI_SERVICE_DEVICE: ${AI_SERVICE_DEVICE:-cpu}
+      AI_SERVICE_AUTO_LOAD: ${AI_SERVICE_AUTO_LOAD:-true}
+      AI_SERVICE_CONFIDENCE_THRESHOLD: ${AI_SERVICE_CONFIDENCE_THRESHOLD:-0.5}
+      AI_SERVICE_IOU_THRESHOLD: ${AI_SERVICE_IOU_THRESHOLD:-0.45}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8081/health')\" || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - vigilant-net
+
+  camera-gateway:
+    build:
+      context: .
+      dockerfile: camera-gateway/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-8082}:8082"
+    environment:
+      GATEWAY_PORT: ${GATEWAY_PORT:-8082}
+      GATEWAY_AI_SERVICE_URL: ${GATEWAY_AI_SERVICE_URL:-http://ai-service:8081}
+      GATEWAY_BACKEND_URL: ${GATEWAY_BACKEND_URL:-http://backend:8080}
+      GATEWAY_AUTH_TOKEN: ${GATEWAY_AUTH_TOKEN:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8082/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - vigilant-net
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - vigilant-net
 
 volumes:
   pgdata:
+    driver: local
   redisdata:
+    driver: local
+  evidence_data:
+    driver: local
+
+networks:
+  vigilant-net:
+    driver: bridge
+    name: vigilant-net
