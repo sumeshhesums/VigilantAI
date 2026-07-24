@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod auth;
+pub mod camera;
 pub mod health;
 pub mod user;
 
@@ -11,5 +12,6 @@ pub fn routes() -> Router<AppState> {
         .nest("/api/v1/auth", auth::routes())
         .nest("/api/v1/admin", admin::routes())
         .nest("/api/v1/users", user::routes())
+        .nest("/api/v1/cameras", camera::routes())
         .nest("/api/v1", health::routes())
 }
