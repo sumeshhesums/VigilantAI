@@ -36,6 +36,20 @@ class Settings(BaseSettings):
     )
     AUTO_LOAD: bool = True
 
+    # Preprocessing settings
+    IMAGE_SIZE: list[int] = Field(
+        default_factory=lambda: [640, 640],
+        description="Target image dimensions [width, height]",
+    )
+    NORMALIZATION: str = Field(
+        default="min_max",
+        description="Normalization mode: min_max, imagenet, custom",
+    )
+    MAX_IMAGE_PIXELS: int = Field(
+        default=100_000_000,
+        description="Maximum allowed pixel count",
+    )
+
     # Request settings
     REQUEST_TIMEOUT: float = 30.0
 
