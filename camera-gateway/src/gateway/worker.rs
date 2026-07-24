@@ -1,10 +1,13 @@
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use tokio::sync::RwLock;
 
-use crate::config::RtspConfig;
+use crate::ai::client::AIClient;
+use crate::ai::error::AIClientError;
+use crate::ai::models::DetectionResponse;
+use crate::config::{AiConfig, RtspConfig};
 use crate::models::{Camera, CameraStatus};
 use crate::stream::client::{RTSPClient, RtspError};
 
@@ -12,31 +15,51 @@ use crate::stream::client::{RTSPClient, RtspError};
 ///
 /// The worker transitions through states: Offline → Connecting → Online → Error
 /// based on the underlying RTSP client's connection state.
+///
+/// When online, the worker runs an inference loop that captures frames and
+/// sends them to the AI service for object detection.
 pub struct CameraWorker {
     camera_id: uuid::Uuid,
     camera_name: String,
     client: RTSPClient,
+    ai_client: AIClient,
     status: RwLock<CameraStatus>,
     started_at: Option<Instant>,
     last_seen: RwLock<Option<Instant>>,
     last_error: RwLock<Option<RtspError>>,
     enabled: AtomicBool,
     running: AtomicBool,
+    last_detection: RwLock<Option<DetectionResponse>>,
+    last_inference: RwLock<Option<Instant>>,
+    last_inference_error: RwLock<Option<AIClientError>>,
+    successful_requests: std::sync::atomic::AtomicU64,
+    failed_requests: std::sync::atomic::AtomicU64,
 }
 
 impl CameraWorker {
-    pub fn new(camera: &Camera, rtsp_config: RtspConfig) -> Result<Self, RtspError> {
+    pub fn new(
+        camera: &Camera,
+        rtsp_config: RtspConfig,
+        ai_config: AiConfig,
+    ) -> Result<Self, RtspError> {
         let client = RTSPClient::new(camera.rtsp_url.clone(), rtsp_config)?;
+        let ai_client = AIClient::new(ai_config);
         Ok(Self {
             camera_id: camera.id,
             camera_name: camera.name.clone(),
             client,
+            ai_client,
             status: RwLock::new(CameraStatus::Offline),
             started_at: None,
             last_seen: RwLock::new(None),
             last_error: RwLock::new(None),
             enabled: AtomicBool::new(camera.enabled),
             running: AtomicBool::new(false),
+            last_detection: RwLock::new(None),
+            last_inference: RwLock::new(None),
+            last_inference_error: RwLock::new(None),
+            successful_requests: std::sync::atomic::AtomicU64::new(0),
+            failed_requests: std::sync::atomic::AtomicU64::new(0),
         })
     }
 
@@ -66,6 +89,35 @@ impl CameraWorker {
 
     pub fn client(&self) -> &RTSPClient {
         &self.client
+    }
+
+    pub fn ai_client(&self) -> &AIClient {
+        &self.ai_client
+    }
+
+    /// Get the most recent detection response from the AI service.
+    pub async fn latest_detection(&self) -> Option<DetectionResponse> {
+        self.last_detection.read().await.clone()
+    }
+
+    /// Get the time of the last successful inference call.
+    pub async fn last_inference_time(&self) -> Option<Instant> {
+        *self.last_inference.read().await
+    }
+
+    /// Get the last AI inference error, if any.
+    pub async fn last_inference_error(&self) -> Option<AIClientError> {
+        self.last_inference_error.read().await.clone()
+    }
+
+    /// Get the count of successful inference requests.
+    pub fn successful_requests(&self) -> u64 {
+        self.successful_requests.load(Ordering::Relaxed)
+    }
+
+    /// Get the count of failed inference requests.
+    pub fn failed_requests(&self) -> u64 {
+        self.failed_requests.load(Ordering::Relaxed)
     }
 
     /// Start the worker — connect to the RTSP stream.
@@ -148,6 +200,74 @@ impl CameraWorker {
         }
     }
 
+    /// Capture a simulated frame and run inference against the AI service.
+    ///
+    /// This is a single inference cycle. Returns the detection response on
+    /// success, or an error. Frame capture is currently simulated (no RTSP
+    /// decoding).
+    pub async fn capture_and_infer(
+        &self,
+        source: &str,
+    ) -> Result<DetectionResponse, AIClientError> {
+        let frame = self.simulate_frame_capture().await;
+
+        let response = self.ai_client.detect_frame(frame, source).await;
+
+        match &response {
+            Ok(det) => {
+                let mut last_det = self.last_detection.write().await;
+                *last_det = Some(det.clone());
+                let mut last_inf = self.last_inference.write().await;
+                *last_inf = Some(Instant::now());
+                let mut last_err = self.last_inference_error.write().await;
+                *last_err = None;
+                self.successful_requests.fetch_add(1, Ordering::Relaxed);
+            }
+            Err(e) => {
+                let mut last_err = self.last_inference_error.write().await;
+                *last_err = Some(e.clone());
+                self.failed_requests.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+
+        response
+    }
+
+    /// Run the continuous inference loop.
+    ///
+    /// Performs `capture_and_infer` at the configured interval until the worker
+    /// is stopped. This should be spawned as a tokio task.
+    pub async fn run_inference_loop(&self, interval: Duration) {
+        loop {
+            if !self.running.load(Ordering::Relaxed) {
+                break;
+            }
+
+            let _ = self.capture_and_infer(&self.camera_name.clone()).await;
+
+            tokio::time::sleep(interval).await;
+        }
+    }
+
+    /// Generate a simulated JPEG frame.
+    ///
+    /// In a future milestone this will decode from the RTSP stream.
+    async fn simulate_frame_capture(&self) -> bytes::Bytes {
+        // Minimal JPEG SOI marker + padding to simulate a real frame.
+        // SOI (FFD8) + APP0 (FFE0) marker with JFIF header
+        let mut data = vec![
+            0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00,
+            0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+        ];
+        // Pad to a reasonable size to simulate a real frame
+        data.resize(1024, 0x00);
+        // Add EOI marker at the end
+        let len = data.len();
+        data[len - 2] = 0xFF;
+        data[len - 1] = 0xD9;
+        bytes::Bytes::from(data)
+    }
+
     /// Get the current status.
     pub async fn status(&self) -> CameraStatus {
         *self.status.read().await
@@ -176,6 +296,8 @@ impl fmt::Debug for CameraWorker {
             .field("rtsp_url", &self.rtsp_url())
             .field("running", &self.is_running())
             .field("enabled", &self.is_enabled())
+            .field("successful_requests", &self.successful_requests())
+            .field("failed_requests", &self.failed_requests())
             .finish_non_exhaustive()
     }
 }
@@ -188,6 +310,10 @@ mod tests {
         RtspConfig {
             connection_timeout: std::time::Duration::from_secs(5),
         }
+    }
+
+    fn test_ai_config() -> AiConfig {
+        AiConfig::default()
     }
 
     fn test_camera(enabled: bool) -> Camera {
@@ -205,7 +331,7 @@ mod tests {
     #[tokio::test]
     async fn test_worker_new_status_offline() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         assert_eq!(worker.status().await, CameraStatus::Offline);
         assert!(!worker.is_running());
     }
@@ -213,7 +339,7 @@ mod tests {
     #[tokio::test]
     async fn test_worker_start_transitions_online() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         worker.start().await;
         assert_eq!(worker.status().await, CameraStatus::Online);
         assert!(worker.is_running());
@@ -224,7 +350,7 @@ mod tests {
     #[tokio::test]
     async fn test_worker_stop_transitions_stopped() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         worker.start().await;
         assert_eq!(worker.status().await, CameraStatus::Online);
 
@@ -236,7 +362,7 @@ mod tests {
     #[tokio::test]
     async fn test_worker_restart() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         worker.start().await;
         assert_eq!(worker.status().await, CameraStatus::Online);
 
@@ -248,7 +374,7 @@ mod tests {
     #[tokio::test]
     async fn test_worker_heartbeat_updates_last_seen() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         worker.start().await;
 
         let before = worker.last_seen().await.unwrap();
@@ -262,7 +388,7 @@ mod tests {
     #[tokio::test]
     async fn test_worker_heartbeat_preserves_online_status() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         worker.start().await;
 
         worker.heartbeat().await;
@@ -272,7 +398,7 @@ mod tests {
     #[tokio::test]
     async fn test_worker_disabled_does_not_start() {
         let camera = test_camera(false);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         worker.start().await;
         assert_eq!(worker.status().await, CameraStatus::Offline);
         assert!(!worker.is_running());
@@ -281,7 +407,7 @@ mod tests {
     #[tokio::test]
     async fn test_worker_set_enabled() {
         let camera = test_camera(false);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         assert!(!worker.is_enabled());
 
         worker.set_enabled(true);
@@ -294,7 +420,7 @@ mod tests {
     #[tokio::test]
     async fn test_worker_heartbeat_when_stopped_does_nothing() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         worker.start().await;
         worker.stop().await;
 
@@ -311,7 +437,7 @@ mod tests {
     #[tokio::test]
     async fn test_worker_no_error_on_success() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         worker.start().await;
         assert!(worker.last_error().await.is_none());
     }
@@ -319,7 +445,7 @@ mod tests {
     #[test]
     fn test_worker_metadata() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         assert_eq!(worker.camera_id(), camera.id);
         assert_eq!(worker.camera_name(), "Test Camera");
         assert_eq!(worker.rtsp_url(), "rtsp://10.0.0.1:554/stream");
@@ -328,17 +454,18 @@ mod tests {
     #[test]
     fn test_worker_client_accessible() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         assert_eq!(worker.client().url(), "rtsp://10.0.0.1:554/stream");
     }
 
     #[test]
     fn test_worker_debug() {
         let camera = test_camera(true);
-        let worker = CameraWorker::new(&camera, test_rtsp_config()).unwrap();
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
         let debug = format!("{worker:?}");
         assert!(debug.contains("CameraWorker"));
         assert!(debug.contains("camera_id"));
+        assert!(debug.contains("successful_requests"));
     }
 
     #[test]
@@ -352,7 +479,41 @@ mod tests {
             resolution: None,
             enabled: true,
         };
-        let result = CameraWorker::new(&camera, test_rtsp_config());
+        let result = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config());
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_worker_initial_detection_none() {
+        let camera = test_camera(true);
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        assert!(worker.latest_detection().await.is_none());
+        assert!(worker.last_inference_time().await.is_none());
+        assert!(worker.last_inference_error().await.is_none());
+        assert_eq!(worker.successful_requests(), 0);
+        assert_eq!(worker.failed_requests(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_worker_capture_and_infer_offline() {
+        let camera = test_camera(true);
+        let ai_config = AiConfig {
+            service_url: "http://127.0.0.1:19996".to_string(),
+            ..AiConfig::default()
+        };
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), ai_config).unwrap();
+        let result = worker.capture_and_infer("cam-1").await;
+        assert!(result.is_err());
+        assert_eq!(worker.failed_requests(), 1);
+        assert_eq!(worker.successful_requests(), 0);
+        assert!(worker.last_inference_error().await.is_some());
+        assert!(worker.latest_detection().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_worker_ai_client_accessible() {
+        let camera = test_camera(true);
+        let worker = CameraWorker::new(&camera, test_rtsp_config(), test_ai_config()).unwrap();
+        assert_eq!(worker.ai_client().base_url(), "http://localhost:8081");
     }
 }

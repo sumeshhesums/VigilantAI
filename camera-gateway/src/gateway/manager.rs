@@ -1,11 +1,21 @@
 use std::sync::Arc;
 
+use crate::ai::error::AIClientError;
 use crate::config::GatewayConfig;
 use crate::models::Camera;
 use crate::stream::reconnect::BackoffState;
 
 use super::state::GatewayState;
 use super::worker::CameraWorker;
+
+/// Aggregate AI inference health metrics.
+#[derive(Debug, Clone, Default)]
+pub struct AiHealthMetrics {
+    pub ai_reachable: bool,
+    pub last_inference: Option<std::time::Instant>,
+    pub successful_requests: u64,
+    pub failed_requests: u64,
+}
 
 /// Manages camera registration, worker lifecycle, and automatic reconnection.
 pub struct GatewayManager {
@@ -21,7 +31,8 @@ impl GatewayManager {
     /// Register a new camera and create a worker for it.
     pub async fn register_camera(&self, camera: Camera) -> Result<Arc<CameraWorker>, String> {
         let worker = Arc::new(
-            CameraWorker::new(&camera, self.config.rtsp.clone()).map_err(|e| e.to_string())?,
+            CameraWorker::new(&camera, self.config.rtsp.clone(), self.config.ai.clone())
+                .map_err(|e| e.to_string())?,
         );
         self.state
             .cameras
@@ -126,6 +137,50 @@ impl GatewayManager {
             }
         }
         failures
+    }
+
+    /// Check AI service health via any registered worker's AI client.
+    pub async fn check_ai_health(&self) -> Result<(), AIClientError> {
+        let client = {
+            let cameras = self.state.cameras.read().await;
+            cameras.values().next().map(|w| w.ai_client().clone())
+        };
+
+        match client {
+            Some(c) => c.health().await,
+            None => Err(AIClientError::Offline { url: String::new() }),
+        }
+    }
+
+    /// Collect aggregated AI inference metrics across all workers.
+    pub async fn ai_health_metrics(&self) -> AiHealthMetrics {
+        let cameras = self.state.cameras.read().await;
+
+        let mut successful: u64 = 0;
+        let mut failed: u64 = 0;
+        let mut last_inference: Option<std::time::Instant> = None;
+
+        for worker in cameras.values() {
+            successful += worker.successful_requests();
+            failed += worker.failed_requests();
+
+            if let Some(t) = worker.last_inference_time().await {
+                match last_inference {
+                    Some(prev) if t > prev => last_inference = Some(t),
+                    None => last_inference = Some(t),
+                    _ => {}
+                }
+            }
+        }
+
+        let ai_reachable = self.check_ai_health().await.is_ok();
+
+        AiHealthMetrics {
+            ai_reachable,
+            last_inference,
+            successful_requests: successful,
+            failed_requests: failed,
+        }
     }
 
     /// Get a reference to the shared state.
@@ -380,5 +435,64 @@ mod tests {
         }
 
         assert_eq!(state.camera_count().await, 20);
+    }
+
+    #[tokio::test]
+    async fn test_ai_health_metrics_initial() {
+        let state = Arc::new(GatewayState::new());
+        let manager = GatewayManager::new(Arc::clone(&state), test_config());
+
+        let metrics = manager.ai_health_metrics().await;
+        assert_eq!(metrics.successful_requests, 0);
+        assert_eq!(metrics.failed_requests, 0);
+        assert!(metrics.last_inference.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_ai_health_check_no_workers() {
+        let state = Arc::new(GatewayState::new());
+        let manager = GatewayManager::new(Arc::clone(&state), test_config());
+
+        let result = manager.check_ai_health().await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_ai_health_check_offline() {
+        let state = Arc::new(GatewayState::new());
+        let config = GatewayConfig {
+            ai: crate::config::AiConfig {
+                service_url: "http://127.0.0.1:19995".to_string(),
+                ..crate::config::AiConfig::default()
+            },
+            ..test_config()
+        };
+        let manager = GatewayManager::new(Arc::clone(&state), config);
+
+        let camera = test_camera("cam1");
+        manager.register_camera(camera).await.unwrap();
+
+        let result = manager.check_ai_health().await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_ai_health_metrics_with_worker() {
+        let state = Arc::new(GatewayState::new());
+        let config = GatewayConfig {
+            ai: crate::config::AiConfig {
+                service_url: "http://127.0.0.1:19994".to_string(),
+                ..crate::config::AiConfig::default()
+            },
+            ..test_config()
+        };
+        let manager = GatewayManager::new(Arc::clone(&state), config);
+
+        let camera = test_camera("cam1");
+        manager.register_camera(camera).await.unwrap();
+
+        let metrics = manager.ai_health_metrics().await;
+        assert!(!metrics.ai_reachable);
+        assert_eq!(metrics.successful_requests, 0);
     }
 }
