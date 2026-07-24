@@ -13,6 +13,13 @@ pub trait UserRepository: Send + Sync {
     async fn find_by_id(&self, pool: &PgPool, id: uuid::Uuid) -> anyhow::Result<Option<User>>;
     async fn find_by_email(&self, pool: &PgPool, email: &str) -> anyhow::Result<Option<User>>;
     async fn list(&self, pool: &PgPool) -> anyhow::Result<Vec<User>>;
+    async fn list_paginated(
+        &self,
+        pool: &PgPool,
+        offset: i64,
+        limit: i64,
+    ) -> anyhow::Result<Vec<User>>;
+    async fn count(&self, pool: &PgPool) -> anyhow::Result<i64>;
     async fn update(
         &self,
         pool: &PgPool,
@@ -20,6 +27,24 @@ pub trait UserRepository: Send + Sync {
         user: &UpdateUser,
     ) -> anyhow::Result<Option<User>>;
     async fn delete(&self, pool: &PgPool, id: uuid::Uuid) -> anyhow::Result<bool>;
+    async fn soft_delete(&self, pool: &PgPool, id: uuid::Uuid) -> anyhow::Result<Option<User>>;
+    async fn assign_role(
+        &self,
+        pool: &PgPool,
+        user_id: uuid::Uuid,
+        role_name: &str,
+    ) -> anyhow::Result<()>;
+    async fn remove_role(
+        &self,
+        pool: &PgPool,
+        user_id: uuid::Uuid,
+        role_name: &str,
+    ) -> anyhow::Result<bool>;
+    async fn find_roles_by_user_id(
+        &self,
+        pool: &PgPool,
+        user_id: uuid::Uuid,
+    ) -> anyhow::Result<Vec<String>>;
 }
 
 #[async_trait]

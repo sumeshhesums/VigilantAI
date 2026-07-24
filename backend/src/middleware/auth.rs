@@ -25,14 +25,33 @@ impl AuthUser {
     }
 }
 
-/// Load the user's roles from the database and insert both roles and
-/// computed permissions into request extensions for downstream RBAC extractors.
+/// The user's RBAC roles, inserted into request extensions by `AuthUser`.
+#[derive(Clone, Debug)]
+pub struct UserRoles(pub HashSet<Role>);
+
+#[async_trait]
+impl axum::extract::FromRequestParts<AppState> for UserRoles {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        _state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<UserRoles>()
+            .cloned()
+            .ok_or_else(|| AppError::Unauthorized("roles not available — did AuthUser run?".into()))
+    }
+}
+
+/// Load the user's roles from the database and insert both role sets and a
+/// typed `UserRoles` into the *original* request extensions.
 async fn attach_roles_and_permissions(
     parts: &mut Parts,
     state: &AppState,
     user_id: uuid::Uuid,
 ) -> Result<(), AppError> {
-    // Query role names via the user_roles + roles join
     let role_names: Vec<String> = sqlx::query_scalar(
         "SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = $1",
     )
@@ -49,8 +68,11 @@ async fn attach_roles_and_permissions(
     let perms: HashSet<Permission> =
         permissions::permissions_for_roles(&roles.iter().copied().collect::<Vec<_>>());
 
-    parts.extensions.insert(roles);
+    // Insert into the *original* parts so downstream extractors (e.g. UserRoles)
+    // can read them.
+    parts.extensions.insert(roles.clone());
     parts.extensions.insert(perms);
+    parts.extensions.insert(UserRoles(roles));
 
     Ok(())
 }
@@ -84,9 +106,6 @@ impl axum::extract::FromRequestParts<AppState> for AuthUser {
 
         match user {
             Some(user) => {
-                // Attach roles + permissions for downstream RBAC guards.
-                // Errors here are non-fatal: the user is still authenticated
-                // even if role lookup fails (they just get empty roles).
                 let _ = attach_roles_and_permissions(parts, state, user.id).await;
                 Ok(AuthUser(user))
             }
