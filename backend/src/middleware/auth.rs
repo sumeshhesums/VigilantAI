@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use axum::extract::State;
 use axum::http::request::Parts;
 use axum::RequestPartsExt;
 use axum_extra::headers::authorization::Bearer;
@@ -23,12 +22,12 @@ impl AuthUser {
 }
 
 #[async_trait]
-impl axum::extract::FromRequestParts<State<AppState>> for AuthUser {
+impl axum::extract::FromRequestParts<AppState> for AuthUser {
     type Rejection = AppError;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &State<AppState>,
+        state: &AppState,
     ) -> Result<Self, Self::Rejection> {
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()

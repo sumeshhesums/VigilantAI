@@ -2,6 +2,7 @@ pub mod app;
 pub mod cache;
 pub mod config;
 pub mod database;
+pub mod dto;
 pub mod errors;
 pub mod handlers;
 pub mod middleware;
