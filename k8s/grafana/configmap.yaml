@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: vigilantai
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: vigilantai
+data:
+  grafana.ini: |
+    [server]
+    root_url = %(protocol)s://%(domain)s:%(http_port)s/grafana/
+
+    [auth.anonymous]
+    enabled = false
+
+    [users]
+    allow_sign_up = false
+
+    [dashboards]
+    default_home_dashboard_path = /var/lib/grafana/dashboards/platform-overview.json
+
+  datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: false
+        jsonData:
+          timeInterval: "15s"
+
+  dashboard-provider.yaml: |
+    apiVersion: 1
+    providers:
+      - name: VigilantAI
+        orgId: 1
+        folder: "VigilantAI"
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: false
