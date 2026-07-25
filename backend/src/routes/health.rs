@@ -103,6 +103,7 @@ mod tests {
             postgres_pool,
             redis_client,
             security,
+            metrics: crate::metrics::AppMetrics::new(),
         }
     }
 

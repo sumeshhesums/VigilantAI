@@ -70,39 +70,40 @@ impl IncidentRepository for PostgresIncidentRepository {
         limit: i64,
     ) -> anyhow::Result<Vec<Incident>> {
         let mut query = String::from("SELECT * FROM incidents WHERE 1=1");
-        let mut bind_values: Vec<String> = Vec::new();
+        let mut bind_idx: u32 = 0;
 
         if params.camera_id.is_some() {
-            query.push_str(" AND camera_id = $");
-            bind_values.push("camera_id".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND camera_id = ${}", bind_idx));
         }
         if params.severity.is_some() {
-            query.push_str(" AND severity = $");
-            bind_values.push("severity".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND severity = ${}", bind_idx));
         }
         if params.status.is_some() {
-            query.push_str(" AND status = $");
-            bind_values.push("status".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND status = ${}", bind_idx));
         }
         if params.event_type.is_some() {
-            query.push_str(" AND event_type = $");
-            bind_values.push("event_type".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND event_type = ${}", bind_idx));
         }
         if params.since.is_some() {
-            query.push_str(" AND timestamp >= $");
-            bind_values.push("since".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND timestamp >= ${}", bind_idx));
         }
         if params.until.is_some() {
-            query.push_str(" AND timestamp <= $");
-            bind_values.push("until".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND timestamp <= ${}", bind_idx));
         }
 
+        bind_idx += 1;
+        let offset_idx = bind_idx;
+        bind_idx += 1;
+        let limit_idx = bind_idx;
+
         query.push_str(" ORDER BY timestamp DESC");
-        query.push_str(&format!(
-            " OFFSET ${} LIMIT ${}",
-            bind_values.len() + 1,
-            bind_values.len() + 2
-        ));
+        query.push_str(&format!(" OFFSET ${} LIMIT ${}", offset_idx, limit_idx));
 
         let mut sql = sqlx::query_as::<_, Incident>(&query);
 
@@ -132,31 +133,31 @@ impl IncidentRepository for PostgresIncidentRepository {
 
     async fn count(&self, pool: &PgPool, params: &IncidentPaginationParams) -> anyhow::Result<i64> {
         let mut query = String::from("SELECT COUNT(*) FROM incidents WHERE 1=1");
-        let mut bind_values: Vec<String> = Vec::new();
+        let mut bind_idx: u32 = 0;
 
         if params.camera_id.is_some() {
-            query.push_str(" AND camera_id = $");
-            bind_values.push("camera_id".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND camera_id = ${}", bind_idx));
         }
         if params.severity.is_some() {
-            query.push_str(" AND severity = $");
-            bind_values.push("severity".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND severity = ${}", bind_idx));
         }
         if params.status.is_some() {
-            query.push_str(" AND status = $");
-            bind_values.push("status".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND status = ${}", bind_idx));
         }
         if params.event_type.is_some() {
-            query.push_str(" AND event_type = $");
-            bind_values.push("event_type".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND event_type = ${}", bind_idx));
         }
         if params.since.is_some() {
-            query.push_str(" AND timestamp >= $");
-            bind_values.push("since".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND timestamp >= ${}", bind_idx));
         }
         if params.until.is_some() {
-            query.push_str(" AND timestamp <= $");
-            bind_values.push("until".to_string());
+            bind_idx += 1;
+            query.push_str(&format!(" AND timestamp <= ${}", bind_idx));
         }
 
         let mut sql = sqlx::query_scalar::<_, i64>(&query);

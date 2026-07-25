@@ -15,6 +15,8 @@ build/
 .venv/
 venv/
 env/
+.ruff_cache/
+.mypy_cache/
 
 # Node.js / Next.js
 node_modules/
