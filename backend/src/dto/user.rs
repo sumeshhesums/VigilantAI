@@ -50,15 +50,16 @@ pub struct UserListResponse {
     pub total: i64,
     pub page: u32,
     pub per_page: u32,
+    pub pages: u32,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct PaginationParams {
+pub struct UserPaginationParams {
     pub page: Option<u32>,
     pub per_page: Option<u32>,
 }
 
-impl PaginationParams {
+impl UserPaginationParams {
     pub fn offset_limit(&self) -> (u32, u32) {
         let page = self.page.unwrap_or(1).max(1);
         let per_page = self.per_page.unwrap_or(20).min(100);

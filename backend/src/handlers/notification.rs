@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
@@ -11,26 +9,11 @@ use crate::dto::notification::{
 use crate::errors::AppError;
 use crate::middleware::auth::{AuthUser, UserRoles};
 use crate::models::{Notification, NotificationChannel};
+use crate::rbac::guards::require_any_role;
 use crate::rbac::roles::Role;
 use crate::repository::notification_repository::PostgresNotificationRepository;
 use crate::services::NotificationService;
 use crate::state::AppState;
-
-fn require_any_role(user_roles: &HashSet<Role>, allowed: &[Role]) -> Result<(), AppError> {
-    for role in allowed {
-        if user_roles.contains(role) {
-            return Ok(());
-        }
-    }
-    Err(AppError::Forbidden(format!(
-        "one of the following roles is required: {}",
-        allowed
-            .iter()
-            .map(|r| r.as_db_str())
-            .collect::<Vec<_>>()
-            .join(", ")
-    )))
-}
 
 fn notification_response(notification: Notification) -> NotificationResponse {
     NotificationResponse {
@@ -59,7 +42,7 @@ fn make_service(state: &AppState) -> NotificationService<PostgresNotificationRep
 // Allowed: SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn send_notification(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Json(body): Json<SendNotificationRequest>,
@@ -97,7 +80,7 @@ pub async fn send_notification(
 // Allowed: Viewer, Operator, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn list_notifications(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Query(params): Query<NotificationPaginationParams>,
@@ -127,7 +110,7 @@ pub async fn list_notifications(
 // Allowed: Viewer, Operator, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn get_notification(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -160,7 +143,7 @@ pub async fn get_notification(
 // Allowed: Operator, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn retry_notifications(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<NotificationResponse>>, AppError> {
@@ -185,80 +168,3 @@ pub async fn retry_notifications(
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_require_any_role_allows_match() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Operator);
-        assert!(require_any_role(&roles, &[Role::Operator, Role::SecurityAdmin]).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_denies_no_match() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Viewer);
-        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_empty_user_roles() {
-        let roles = HashSet::new();
-        let result = require_any_role(&roles, &[Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_system_admin_allowed_all() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::SystemAdmin);
-        let all_roles = [
-            Role::Viewer,
-            Role::Operator,
-            Role::SecurityAdmin,
-            Role::SystemAdmin,
-        ];
-        assert!(require_any_role(&roles, &all_roles).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_viewer_can_view() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Viewer);
-        let view_roles = [
-            Role::Viewer,
-            Role::Operator,
-            Role::SecurityAdmin,
-            Role::SystemAdmin,
-        ];
-        assert!(require_any_role(&roles, &view_roles).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_viewer_cannot_send() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Viewer);
-        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_operator_can_retry() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Operator);
-        let retry_roles = [Role::Operator, Role::SecurityAdmin, Role::SystemAdmin];
-        assert!(require_any_role(&roles, &retry_roles).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_operator_cannot_send() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Operator);
-        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-}

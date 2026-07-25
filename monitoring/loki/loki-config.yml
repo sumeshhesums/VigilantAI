@@ -76,8 +76,3 @@ pattern_ingester:
 
 frontend:
   max_outstanding_per_tenant: 10240
-
-distributor:
-  rate_store:
-    stream_rate_limit: 5MB
-    stream_rate_burst: 15MB

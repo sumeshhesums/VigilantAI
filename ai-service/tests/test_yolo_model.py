@@ -1,7 +1,9 @@
 """Tests for YOLO model implementation."""
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
 
 from app.models.base import ModelState
 from app.models.factory import YOLOModel
@@ -87,37 +89,51 @@ class TestYOLOModelPredict:
     """Tests for YOLO model prediction."""
 
     @pytest.mark.asyncio
-    async def test_predict_returns_results(self):
-        """Test predict calls model.predict correctly."""
-        import numpy as np
-
+    async def test_predict_returns_detection_response(self, sample_image_bytes):
+        """Test predict returns a DetectionResponse."""
         mock_result = MagicMock()
         mock_model = MagicMock()
         mock_model.names = {0: "person"}
         mock_model.predict.return_value = [mock_result]
 
+        boxes = MagicMock()
+        boxes.__len__ = MagicMock(return_value=1)
+        xyxy_mock = MagicMock()
+        xyxy_mock.cpu.return_value.numpy.return_value = np.array(
+            [[100, 100, 200, 200]], dtype=np.float32
+        )
+        boxes.xyxy = xyxy_mock
+        conf_mock = MagicMock()
+        conf_mock.cpu.return_value.numpy.return_value = np.array(
+            [0.95], dtype=np.float32
+        )
+        boxes.conf = conf_mock
+        cls_mock = MagicMock()
+        cls_mock.cpu.return_value.numpy.return_value = np.array([0], dtype=np.float32)
+        boxes.cls = cls_mock
+        mock_result.boxes = boxes
+        mock_result.names = {0: "person"}
+
         with patch("ultralytics.YOLO", return_value=mock_model):
             model = YOLOModel(name="yolov8n")
             await model.load()
-
-            dummy = np.zeros((640, 640, 3), dtype=np.uint8)
-            results = model.predict(source=dummy, conf=0.5, iou=0.45)
-
-            assert len(results) == 1
-            mock_model.predict.assert_called_once_with(
-                source=dummy, conf=0.5, iou=0.45, verbose=False
+            response = await model.predict(
+                image_bytes=sample_image_bytes,
+                confidence_threshold=0.5,
+                iou_threshold=0.45,
             )
 
+        assert response.detection_count == 1
+        assert response.detections[0].class_name == "person"
+        assert response.detections[0].confidence == 0.95
+        assert response.metadata.model_name == "yolov8n"
+
     @pytest.mark.asyncio
-    async def test_predict_before_load_raises(self):
+    async def test_predict_before_load_raises(self, sample_image_bytes):
         """Test predict before load raises RuntimeError."""
-        import numpy as np
-
         model = YOLOModel(name="yolov8n")
-        dummy = np.zeros((640, 640, 3), dtype=np.uint8)
-
         with pytest.raises(RuntimeError, match="not loaded"):
-            model.predict(source=dummy)
+            await model.predict(image_bytes=sample_image_bytes)
 
 
 class TestYOLOModelWarmup:

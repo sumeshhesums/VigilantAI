@@ -3,13 +3,15 @@ use axum::http::StatusCode;
 use axum::Json;
 
 use crate::dto::user::{
-    AssignRoleRequest, CreateUserRequest, PaginationParams, UpdateUserRequest, UserListResponse,
-    UserResponse,
+    AssignRoleRequest, CreateUserRequest, UpdateUserRequest, UserListResponse,
+    UserPaginationParams, UserResponse,
 };
 use crate::errors::AppError;
 use crate::middleware::auth::{AuthUser, UserRoles};
+use crate::rbac::guards::require_any_role;
 use crate::rbac::roles::Role;
 use crate::repository::user_repository::PostgresUserRepository;
+use crate::repository::UserRepository;
 use crate::services::UserService;
 use crate::state::AppState;
 
@@ -27,41 +29,28 @@ fn user_response(user: crate::models::User, roles: Vec<String>) -> UserResponse 
 }
 
 async fn fetch_user_roles(state: &AppState, user_id: uuid::Uuid) -> Vec<String> {
-    sqlx::query_scalar(
-        "SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = $1 ORDER BY r.name",
-    )
-    .bind(user_id)
-    .fetch_all(&state.postgres_pool)
-    .await
-    .unwrap_or_default()
+    let repo = PostgresUserRepository;
+    repo.find_roles_by_user_id(&state.postgres_pool, user_id)
+        .await
+        .unwrap_or_default()
 }
 
 fn require_admin_or_security_admin(roles: &UserRoles) -> Result<(), AppError> {
-    if roles.0.contains(&Role::SystemAdmin) || roles.0.contains(&Role::SecurityAdmin) {
-        Ok(())
-    } else {
-        Err(AppError::Forbidden(
-            "requires system_admin or security_admin role".into(),
-        ))
-    }
+    require_any_role(&roles.0, &[Role::SystemAdmin, Role::SecurityAdmin])
 }
 
 fn require_system_admin(roles: &UserRoles) -> Result<(), AppError> {
-    if roles.0.contains(&Role::SystemAdmin) {
-        Ok(())
-    } else {
-        Err(AppError::Forbidden("requires system_admin role".into()))
-    }
+    require_any_role(&roles.0, &[Role::SystemAdmin])
 }
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/users
 // ---------------------------------------------------------------------------
 pub async fn list_users(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
-    Query(params): Query<PaginationParams>,
+    Query(params): Query<UserPaginationParams>,
 ) -> Result<Json<UserListResponse>, AppError> {
     require_admin_or_security_admin(&UserRoles(roles.clone()))?;
 
@@ -87,6 +76,11 @@ pub async fn list_users(
         total,
         page,
         per_page: limit,
+        pages: if limit > 0 {
+            (total as u32).div_ceil(limit).max(1)
+        } else {
+            1
+        },
     }))
 }
 
@@ -94,7 +88,7 @@ pub async fn list_users(
 // GET /api/v1/users/:id
 // ---------------------------------------------------------------------------
 pub async fn get_user(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -123,7 +117,7 @@ pub async fn get_user(
 // POST /api/v1/users
 // ---------------------------------------------------------------------------
 pub async fn create_user(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Json(body): Json<CreateUserRequest>,
@@ -157,7 +151,7 @@ pub async fn create_user(
 // PATCH /api/v1/users/:id
 // ---------------------------------------------------------------------------
 pub async fn update_user(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -190,7 +184,7 @@ pub async fn update_user(
 // DELETE /api/v1/users/:id
 // ---------------------------------------------------------------------------
 pub async fn delete_user(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -221,7 +215,7 @@ pub async fn delete_user(
 // POST /api/v1/users/:id/roles
 // ---------------------------------------------------------------------------
 pub async fn assign_role(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -253,7 +247,7 @@ pub async fn assign_role(
 // DELETE /api/v1/users/:id/roles
 // ---------------------------------------------------------------------------
 pub async fn remove_role(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,

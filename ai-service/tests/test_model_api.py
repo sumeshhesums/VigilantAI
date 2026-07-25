@@ -1,5 +1,7 @@
 """Tests for model management API endpoints."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -94,12 +96,14 @@ class TestModelsLoadEndpoint:
 
     def test_load_rtdetr_model_returns_200(self, client: TestClient):
         """Test load RT-DETR model endpoint returns 200."""
-        response = client.post("/models/rtdetr-l/load")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            response = client.post("/models/rtdetr-l/load")
         assert response.status_code == 200
 
     def test_load_rtdetr_model_response_schema(self, client: TestClient):
         """Test load RT-DETR model response has correct fields."""
-        response = client.post("/models/rtdetr-l/load")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            response = client.post("/models/rtdetr-l/load")
         data = response.json()
         assert data["name"] == "rtdetr-l"
         assert data["action"] == "load"
@@ -112,7 +116,8 @@ class TestModelsLoadEndpoint:
 
     def test_load_model_then_get_shows_loaded(self, client: TestClient):
         """Test loading model then getting it shows loaded state."""
-        client.post("/models/rtdetr-l/load")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            client.post("/models/rtdetr-l/load")
         response = client.get("/models/rtdetr-l")
         data = response.json()
         assert data["loaded"] is True
@@ -124,13 +129,15 @@ class TestModelsUnloadEndpoint:
 
     def test_unload_model_returns_200(self, client: TestClient):
         """Test unload model endpoint returns 200."""
-        client.post("/models/rtdetr-l/load")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            client.post("/models/rtdetr-l/load")
         response = client.post("/models/rtdetr-l/unload")
         assert response.status_code == 200
 
     def test_unload_model_response_schema(self, client: TestClient):
         """Test unload model response has correct fields."""
-        client.post("/models/rtdetr-l/load")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            client.post("/models/rtdetr-l/load")
         response = client.post("/models/rtdetr-l/unload")
         data = response.json()
         assert data["name"] == "rtdetr-l"
@@ -148,14 +155,18 @@ class TestModelsReloadEndpoint:
 
     def test_reload_model_returns_200(self, client: TestClient):
         """Test reload model endpoint returns 200."""
-        client.post("/models/rtdetr-l/load")
-        response = client.post("/models/rtdetr-l/reload")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            client.post("/models/rtdetr-l/load")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            response = client.post("/models/rtdetr-l/reload")
         assert response.status_code == 200
 
     def test_reload_model_response_schema(self, client: TestClient):
         """Test reload model response has correct fields."""
-        client.post("/models/rtdetr-l/load")
-        response = client.post("/models/rtdetr-l/reload")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            client.post("/models/rtdetr-l/load")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            response = client.post("/models/rtdetr-l/reload")
         data = response.json()
         assert data["name"] == "rtdetr-l"
         assert data["action"] == "reload"

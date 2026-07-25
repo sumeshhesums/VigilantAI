@@ -83,6 +83,12 @@ pub trait CameraRepository: Send + Sync {
         rtsp_url: &str,
     ) -> anyhow::Result<Option<Camera>>;
     async fn list(&self, pool: &PgPool) -> anyhow::Result<Vec<Camera>>;
+    async fn list_paginated(
+        &self,
+        pool: &PgPool,
+        offset: i64,
+        limit: i64,
+    ) -> anyhow::Result<Vec<Camera>>;
     async fn update(
         &self,
         pool: &PgPool,

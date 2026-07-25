@@ -96,15 +96,21 @@ pub async fn refresh(
     Ok(Json(response))
 }
 
-pub async fn logout(AuthUser(_user): AuthUser) -> Result<StatusCode, AppError> {
+pub async fn logout(
+    State(state): State<AppState>,
+    AuthUser { user: _, token }: AuthUser,
+) -> Result<StatusCode, AppError> {
     let repo = PostgresUserRepository;
     let service = AuthService::new(&repo);
 
-    service.logout().await.map_err(AppError::Internal)?;
+    service
+        .logout(&token, &state.security, &state.redis_client)
+        .await
+        .map_err(AppError::Internal)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn me(AuthUser(user): AuthUser) -> Json<UserResponse> {
+pub async fn me(AuthUser { user, .. }: AuthUser) -> Json<UserResponse> {
     Json(user_response(user))
 }

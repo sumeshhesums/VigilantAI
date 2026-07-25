@@ -85,22 +85,6 @@ impl NotificationRepository for PostgresNotificationRepository {
         offset: i64,
         limit: i64,
     ) -> anyhow::Result<Vec<Notification>> {
-        let mut query = String::from("SELECT * FROM notifications WHERE 1=1");
-
-        if params.status.is_some() {
-            query.push_str(" AND status = $N");
-        }
-        if params.channel.is_some() {
-            query.push_str(" AND channel = $N");
-        }
-        if params.incident_id.is_some() {
-            query.push_str(" AND incident_id = $N");
-        }
-
-        query.push_str(" ORDER BY created_at DESC");
-        query.push_str(&format!(" OFFSET ${} LIMIT ${}", "O", "L"));
-
-        // Use simple parameterized query instead of dynamic building
         let records = sqlx::query_as::<_, Notification>(
             "SELECT * FROM notifications \
              WHERE ($1::text IS NULL OR status = $1) \

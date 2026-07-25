@@ -42,6 +42,7 @@ pub struct CameraListResponse {
     pub total: i64,
     pub page: u32,
     pub per_page: u32,
+    pub pages: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -56,5 +57,75 @@ impl CameraPaginationParams {
         let per_page = self.per_page.unwrap_or(20).min(100);
         let offset = (page - 1) * per_page;
         (offset, per_page)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pagination_defaults() {
+        let params = CameraPaginationParams {
+            page: None,
+            per_page: None,
+        };
+        let (offset, limit) = params.offset_limit();
+        assert_eq!(offset, 0);
+        assert_eq!(limit, 20);
+    }
+
+    #[test]
+    fn test_pagination_page_2() {
+        let params = CameraPaginationParams {
+            page: Some(2),
+            per_page: Some(10),
+        };
+        let (offset, limit) = params.offset_limit();
+        assert_eq!(offset, 10);
+        assert_eq!(limit, 10);
+    }
+
+    #[test]
+    fn test_pagination_clamps_max_per_page() {
+        let params = CameraPaginationParams {
+            page: Some(1),
+            per_page: Some(200),
+        };
+        let (_, limit) = params.offset_limit();
+        assert_eq!(limit, 100);
+    }
+
+    #[test]
+    fn test_pagination_clamps_min_page() {
+        let params = CameraPaginationParams {
+            page: Some(0),
+            per_page: Some(10),
+        };
+        let (offset, _) = params.offset_limit();
+        assert_eq!(offset, 0);
+    }
+
+    #[test]
+    fn test_pagination_large_page() {
+        let params = CameraPaginationParams {
+            page: Some(100),
+            per_page: Some(10),
+        };
+        let (offset, _) = params.offset_limit();
+        assert_eq!(offset, 990);
+    }
+
+    #[test]
+    fn test_camera_list_response_has_pages() {
+        let response = CameraListResponse {
+            cameras: vec![],
+            total: 0,
+            page: 1,
+            per_page: 20,
+            pages: 0,
+        };
+        assert_eq!(response.pages, 0);
+        assert_eq!(response.total, 0);
     }
 }

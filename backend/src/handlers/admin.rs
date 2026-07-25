@@ -12,7 +12,7 @@ pub struct AdminHealthResponse {
 }
 
 pub async fn admin_health(
-    AuthUser(user): AuthUser,
+    AuthUser { user, .. }: AuthUser,
     axum::extract::State(state): axum::extract::State<AppState>,
 ) -> Result<Json<AdminHealthResponse>, crate::errors::AppError> {
     let role_names: Vec<String> = sqlx::query_scalar(

@@ -25,6 +25,7 @@ pub struct EvidenceListResponse {
     pub total: i64,
     pub page: u32,
     pub per_page: u32,
+    pub pages: u32,
 }
 
 // ---------------------------------------------------------------------------
@@ -81,6 +82,7 @@ mod tests {
             total: 0,
             page: 1,
             per_page: 20,
+            pages: 0,
         };
 
         let json = serde_json::to_string(&list).unwrap();

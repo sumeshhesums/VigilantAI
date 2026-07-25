@@ -75,3 +75,33 @@ class DetectionResponse(BaseModel):
         ..., ge=0, description="Model inference time in milliseconds"
     )
     metadata: InferenceMetadata = Field(..., description="Inference metadata")
+
+
+class SingleBatchResult(BaseModel):
+    """Result for a single image within a batch request."""
+
+    index: int = Field(..., ge=0, description="Original index in the batch")
+    source: str = Field(default="<unknown>", description="Image source identifier")
+    result: DetectionResponse | None = Field(
+        default=None, description="Detection result (null on error)"
+    )
+    error: str | None = Field(
+        default=None, description="Error message if processing failed"
+    )
+
+
+class BatchDetectionResponse(BaseModel):
+    """Response containing detection results for a batch of images."""
+
+    results: list[SingleBatchResult] = Field(
+        default_factory=list, description="Results for each image in the batch"
+    )
+    total_images: int = Field(..., ge=0, description="Total images in the batch")
+    successful: int = Field(..., ge=0, description="Successfully processed images")
+    failed: int = Field(..., ge=0, description="Failed images")
+    total_detections: int = Field(
+        ..., ge=0, description="Total detections across all images"
+    )
+    total_processing_time_ms: float = Field(
+        ..., ge=0, description="Total wall-clock time for the entire batch"
+    )

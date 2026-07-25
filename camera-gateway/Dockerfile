@@ -1,5 +1,5 @@
 # -- stage 1: cargo-chef prepare --
-FROM rust:1.82-bookworm AS chef
+FROM rust:1.89-bookworm AS chef
 RUN cargo install cargo-chef --locked
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 
 # -- stage 3: build application --
 COPY . .
-RUN touch src/main.rs && cargo build --release --bin camera-gateway
+RUN touch camera-gateway/src/main.rs && cargo build --release --bin camera-gateway
 
 # -- stage 4: runtime --
 FROM debian:bookworm-slim AS runner

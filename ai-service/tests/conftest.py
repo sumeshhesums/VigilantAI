@@ -1,6 +1,7 @@
 """Shared test fixtures for AI service tests."""
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import cv2
 import numpy as np
@@ -45,3 +46,19 @@ def corrupt_image_bytes():
 def assets_dir():
     """Return the test assets directory."""
     return Path(__file__).parent / "assets"
+
+
+@pytest.fixture
+def mock_yolo_model():
+    """Create a mock Ultralytics YOLO model."""
+    mock_model = MagicMock()
+    mock_model.names = {0: "person", 1: "car", 2: "dog"}
+    return mock_model
+
+
+@pytest.fixture
+def mock_rtdetr_model():
+    """Create a mock Ultralytics RTDETR model."""
+    mock_model = MagicMock()
+    mock_model.names = {0: "person", 1: "car", 2: "dog"}
+    return mock_model

@@ -102,6 +102,11 @@ impl<R: EvidenceRepository, S: Storage> EvidenceService<R, S> {
             total,
             page,
             per_page: limit,
+            pages: if limit > 0 {
+                (total as u32).div_ceil(limit).max(1)
+            } else {
+                1
+            },
         })
     }
 

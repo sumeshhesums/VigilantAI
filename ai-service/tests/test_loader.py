@@ -1,5 +1,7 @@
 """Tests for ModelLoader."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from app.models.factory import RTDETRModel
@@ -7,26 +9,36 @@ from app.models.loader import ModelLoader
 from app.models.registry import ModelRegistry
 
 
+@pytest.fixture
+def registry():
+    """Create a registry with two models."""
+    reg = ModelRegistry()
+    reg.register_model(RTDETRModel(name="rtdetr-a"))
+    reg.register_model(RTDETRModel(name="rtdetr-b"))
+    return reg
+
+
+@pytest.fixture
+def loader(registry):
+    """Create a ModelLoader with the registry."""
+    return ModelLoader(registry)
+
+
+def _mock_load_rtdetr():
+    """Context manager that mocks RTDETR loading."""
+    mock_model = MagicMock()
+    mock_model.names = {0: "person", 1: "car"}
+    return patch("ultralytics.RTDETR", return_value=mock_model)
+
+
 class TestModelLoader:
     """Tests for ModelLoader class."""
-
-    @pytest.fixture
-    def registry(self):
-        """Create a registry with two models."""
-        reg = ModelRegistry()
-        reg.register_model(RTDETRModel(name="rtdetr-a"))
-        reg.register_model(RTDETRModel(name="rtdetr-b"))
-        return reg
-
-    @pytest.fixture
-    def loader(self, registry):
-        """Create a ModelLoader with the registry."""
-        return ModelLoader(registry)
 
     @pytest.mark.asyncio
     async def test_load_model(self, loader: ModelLoader):
         """Test loading a single model."""
-        result = await loader.load_model("rtdetr-a")
+        with _mock_load_rtdetr():
+            result = await loader.load_model("rtdetr-a")
         assert result["state"] == "loaded"
         assert result["name"] == "rtdetr-a"
 
@@ -39,7 +51,8 @@ class TestModelLoader:
     @pytest.mark.asyncio
     async def test_unload_model(self, loader: ModelLoader):
         """Test unloading a model."""
-        await loader.load_model("rtdetr-a")
+        with _mock_load_rtdetr():
+            await loader.load_model("rtdetr-a")
         await loader.unload_model("rtdetr-a")
         status = loader.get_model_status("rtdetr-a")
         assert status["state"] == "not_loaded"
@@ -47,14 +60,17 @@ class TestModelLoader:
     @pytest.mark.asyncio
     async def test_reload_model(self, loader: ModelLoader):
         """Test reloading a model."""
-        await loader.load_model("rtdetr-a")
-        result = await loader.reload_model("rtdetr-a")
+        with _mock_load_rtdetr():
+            await loader.load_model("rtdetr-a")
+        with _mock_load_rtdetr():
+            result = await loader.reload_model("rtdetr-a")
         assert result["state"] == "loaded"
 
     @pytest.mark.asyncio
     async def test_load_all(self, loader: ModelLoader):
         """Test loading all models."""
-        results = await loader.load_all()
+        with _mock_load_rtdetr():
+            results = await loader.load_all()
         assert len(results) == 2
         assert "rtdetr-a" in results
         assert "rtdetr-b" in results
@@ -64,7 +80,8 @@ class TestModelLoader:
     @pytest.mark.asyncio
     async def test_unload_all(self, loader: ModelLoader):
         """Test unloading all models."""
-        await loader.load_all()
+        with _mock_load_rtdetr():
+            await loader.load_all()
         await loader.unload_all()
         for name in ["rtdetr-a", "rtdetr-b"]:
             status = loader.get_model_status(name)
@@ -73,7 +90,8 @@ class TestModelLoader:
     @pytest.mark.asyncio
     async def test_warmup_model(self, loader: ModelLoader):
         """Test warming up a loaded model."""
-        await loader.load_model("rtdetr-a")
+        with _mock_load_rtdetr():
+            await loader.load_model("rtdetr-a")
         result = await loader.warmup_model("rtdetr-a")
         assert result["state"] == "loaded"
 

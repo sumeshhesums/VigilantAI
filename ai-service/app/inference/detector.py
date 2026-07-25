@@ -140,3 +140,43 @@ class YoloDetector:
         )
 
         return response
+
+    async def detect_batch(
+        self,
+        images: list[tuple[int, bytes, str]],
+        model_name: str,
+        model,
+        confidence_threshold: float | None = None,
+        iou_threshold: float | None = None,
+    ) -> list[tuple[int, str, DetectionResponse | None, str | None]]:
+        """Run detection on multiple images concurrently.
+
+        Args:
+            images: List of (index, image_bytes, source) tuples.
+            model_name: Name of the model for metadata.
+            model: Ultralytics YOLO model instance.
+            confidence_threshold: Override default confidence.
+            iou_threshold: Override default IoU threshold.
+
+        Returns:
+            List of (index, source, response_or_none, error_or_none) tuples.
+        """
+
+        async def _process_one(
+            idx: int, img_bytes: bytes, src: str
+        ) -> tuple[int, str, DetectionResponse | None, str | None]:
+            try:
+                resp = await self.detect(
+                    image_bytes=img_bytes,
+                    model_name=model_name,
+                    model=model,
+                    source=src,
+                    confidence_threshold=confidence_threshold,
+                    iou_threshold=iou_threshold,
+                )
+                return (idx, src, resp, None)
+            except Exception as e:
+                return (idx, src, None, str(e))
+
+        tasks = [_process_one(idx, data, src) for idx, data, src in images]
+        return await asyncio.gather(*tasks)

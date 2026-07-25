@@ -1,5 +1,7 @@
 """Tests for model manager."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from app.core.model_manager import ModelManager
@@ -9,21 +11,22 @@ from app.models.loader import ModelLoader
 from app.models.registry import ModelRegistry
 
 
+@pytest.fixture
+def manager():
+    """Create a ModelManager with a single test model."""
+    reg = ModelRegistry()
+    reg.register_model(RTDETRModel(name="test_model", version="1.0.0"))
+    reg.set_default("test_model")
+    loader = ModelLoader(reg)
+    return ModelManager(
+        registry=reg,
+        loader=loader,
+        default_model_name="test_model",
+    )
+
+
 class TestModelManager:
     """Tests for ModelManager class."""
-
-    @pytest.fixture
-    def manager(self):
-        """Create a ModelManager with a single test model."""
-        reg = ModelRegistry()
-        reg.register_model(RTDETRModel(name="test_model", version="1.0.0"))
-        reg.set_default("test_model")
-        loader = ModelLoader(reg)
-        return ModelManager(
-            registry=reg,
-            loader=loader,
-            default_model_name="test_model",
-        )
 
     @pytest.mark.asyncio
     async def test_initial_state_is_not_loaded(self, manager: ModelManager):
@@ -34,28 +37,35 @@ class TestModelManager:
     @pytest.mark.asyncio
     async def test_load_model_changes_state(self, manager: ModelManager):
         """Test loading model changes state to LOADED."""
-        await manager.load_by_name("test_model")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            await manager.load_by_name("test_model")
         assert manager.is_loaded
 
     @pytest.mark.asyncio
     async def test_load_model_sets_metadata(self, manager: ModelManager):
         """Test loading model sets metadata correctly."""
-        await manager.load_by_name("test_model")
+        mock_model = MagicMock()
+        mock_model.names = {0: "person", 1: "car"}
+        with patch("ultralytics.RTDETR", return_value=mock_model):
+            await manager.load_by_name("test_model")
         info = manager.get_model_info()
         assert info["input_shape"] == [1, 3, 640, 640]
-        assert info["class_count"] == 80
+        assert info["class_count"] == 2
 
     @pytest.mark.asyncio
     async def test_load_already_loaded_model(self, manager: ModelManager):
         """Test loading already loaded model returns same metadata."""
-        await manager.load_by_name("test_model")
-        await manager.load_by_name("test_model")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            await manager.load_by_name("test_model")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            await manager.load_by_name("test_model")
         assert manager.is_loaded
 
     @pytest.mark.asyncio
     async def test_unload_model(self, manager: ModelManager):
         """Test unloading model changes state to NOT_LOADED."""
-        await manager.load_by_name("test_model")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            await manager.load_by_name("test_model")
         await manager.unload_by_name("test_model")
         assert manager.metadata.state == ModelState.NOT_LOADED
         assert not manager.is_loaded
@@ -69,8 +79,10 @@ class TestModelManager:
     @pytest.mark.asyncio
     async def test_reload_model(self, manager: ModelManager):
         """Test reloading model works correctly."""
-        await manager.load_by_name("test_model")
-        result = await manager.reload_by_name("test_model")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            await manager.load_by_name("test_model")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            result = await manager.reload_by_name("test_model")
         assert result["state"] == "loaded"
 
     def test_get_status(self, manager: ModelManager):

@@ -16,6 +16,7 @@ use camera_gateway::gateway::state::GatewayState;
 use camera_gateway::services::health::{GatewayHealth, HealthResponse};
 
 #[derive(Clone)]
+#[allow(dead_code)]
 struct GatewayMetrics {
     registry: Registry,
     cameras_connected: IntGauge,
@@ -78,14 +79,28 @@ impl GatewayMetrics {
         ))
         .unwrap();
 
-        registry.register(Box::new(cameras_connected.clone())).unwrap();
+        registry
+            .register(Box::new(cameras_connected.clone()))
+            .unwrap();
         registry.register(Box::new(cameras_online.clone())).unwrap();
-        registry.register(Box::new(cameras_offline.clone())).unwrap();
-        registry.register(Box::new(reconnect_attempts_total.clone())).unwrap();
-        registry.register(Box::new(frames_processed_total.clone())).unwrap();
-        registry.register(Box::new(ai_requests_total.clone())).unwrap();
-        registry.register(Box::new(ai_failures_total.clone())).unwrap();
-        registry.register(Box::new(backend_publishes_total.clone())).unwrap();
+        registry
+            .register(Box::new(cameras_offline.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(reconnect_attempts_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(frames_processed_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(ai_requests_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(ai_failures_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(backend_publishes_total.clone()))
+            .unwrap();
         registry
             .register(Box::new(backend_publish_failures_total.clone()))
             .unwrap();
@@ -145,10 +160,9 @@ async fn metrics_handler(AxumState(state): AxumState<HttpState>) -> impl IntoRes
 fn build_config_from_env() -> GatewayConfig {
     let ai_url = std::env::var("GATEWAY_AI_SERVICE_URL")
         .unwrap_or_else(|_| "http://ai-service:8081".to_string());
-    let backend_url = std::env::var("GATEWAY_BACKEND_URL")
-        .unwrap_or_else(|_| "http://backend:8080".to_string());
-    let auth_token = std::env::var("GATEWAY_AUTH_TOKEN")
-        .unwrap_or_default();
+    let backend_url =
+        std::env::var("GATEWAY_BACKEND_URL").unwrap_or_else(|_| "http://backend:8080".to_string());
+    let auth_token = std::env::var("GATEWAY_AUTH_TOKEN").unwrap_or_default();
 
     GatewayConfig {
         ai: camera_gateway::config::AiConfig {

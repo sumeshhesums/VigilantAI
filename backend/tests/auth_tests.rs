@@ -12,6 +12,7 @@ use backend::config::notification::NotificationConfig;
 use backend::config::redis::RedisConfig;
 use backend::config::server::ServerConfig;
 use backend::config::AppConfig;
+use backend::metrics::AppMetrics;
 use backend::security::Security;
 use backend::state::AppState;
 
@@ -89,6 +90,7 @@ async fn setup() -> (PgPool, AppState) {
         postgres_pool: pool.clone(),
         redis_client,
         security,
+        metrics: AppMetrics::new(),
     };
 
     (pool, state)
@@ -653,6 +655,7 @@ async fn test_register_validation_missing_fields() {
         postgres_pool: pool,
         redis_client,
         security,
+        metrics: AppMetrics::new(),
     };
     let app = app::router(state);
 
@@ -715,6 +718,7 @@ async fn test_login_validation_missing_fields() {
         postgres_pool: pool,
         redis_client,
         security,
+        metrics: AppMetrics::new(),
     };
     let app = app::router(state);
 

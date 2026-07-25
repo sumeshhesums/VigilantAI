@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
@@ -11,27 +9,11 @@ use crate::dto::incident::{
 use crate::errors::AppError;
 use crate::middleware::auth::{AuthUser, UserRoles};
 use crate::models::Incident;
+use crate::rbac::guards::require_any_role;
 use crate::rbac::roles::Role;
 use crate::repository::incident_repository::PostgresIncidentRepository;
 use crate::services::IncidentService;
 use crate::state::AppState;
-
-/// Check that the user holds at least one of the required roles.
-fn require_any_role(user_roles: &HashSet<Role>, allowed: &[Role]) -> Result<(), AppError> {
-    for role in allowed {
-        if user_roles.contains(role) {
-            return Ok(());
-        }
-    }
-    Err(AppError::Forbidden(format!(
-        "one of the following roles is required: {}",
-        allowed
-            .iter()
-            .map(|r| r.as_db_str())
-            .collect::<Vec<_>>()
-            .join(", ")
-    )))
-}
 
 fn incident_response(incident: Incident) -> IncidentResponse {
     use crate::models::{IncidentSeverity, IncidentStatus};
@@ -59,7 +41,7 @@ fn incident_response(incident: Incident) -> IncidentResponse {
 // Allowed: SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn create_incident(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Json(body): Json<CreateIncidentRequest>,
@@ -92,7 +74,7 @@ pub async fn create_incident(
 // Allowed: Viewer, Operator, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn list_incidents(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Query(params): Query<IncidentPaginationParams>,
@@ -123,7 +105,7 @@ pub async fn list_incidents(
 // Allowed: Viewer, Operator, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn get_incident(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -157,7 +139,7 @@ pub async fn get_incident(
 // Allowed: SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn update_incident(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -185,64 +167,3 @@ pub async fn update_incident(
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_require_any_role_allows_match() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Viewer);
-        assert!(require_any_role(&roles, &[Role::Viewer, Role::Operator]).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_denies_no_match() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Viewer);
-        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_empty_user_roles() {
-        let roles = HashSet::new();
-        let result = require_any_role(&roles, &[Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_system_admin_allowed_all() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::SystemAdmin);
-        let all_read = [
-            Role::Viewer,
-            Role::Operator,
-            Role::SecurityAdmin,
-            Role::SystemAdmin,
-        ];
-        assert!(require_any_role(&roles, &all_read).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_operator_can_view() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Operator);
-        let view_roles = [
-            Role::Viewer,
-            Role::Operator,
-            Role::SecurityAdmin,
-            Role::SystemAdmin,
-        ];
-        assert!(require_any_role(&roles, &view_roles).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_operator_cannot_create() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Operator);
-        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-}

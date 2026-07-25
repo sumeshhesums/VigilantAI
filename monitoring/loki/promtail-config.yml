@@ -34,8 +34,10 @@ scrape_configs:
         target_label: 'logstream'
       - source_labels: ['__meta_docker_container_label_vigilantai_environment']
         target_label: 'environment'
-        fallback_labels:
-          environment: 'development'
+      - source_labels: ['environment']
+        regex: '^$'
+        target_label: 'environment'
+        replacement: 'development'
     pipeline_stages:
       - docker: {}
       - labels:
@@ -80,8 +82,10 @@ scrape_configs:
         regex: true
       - source_labels: ['__meta_kubernetes_pod_annotation_vigilantai_log_level']
         target_label: 'level'
-        fallback_labels:
-          level: 'info'
+      - source_labels: ['level']
+        regex: '^$'
+        target_label: 'level'
+        replacement: 'info'
     pipeline_stages:
       - cri: {}
       - json:

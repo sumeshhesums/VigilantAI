@@ -10,6 +10,24 @@ use crate::state::AppState;
 use super::permissions::Permission;
 use super::roles::Role;
 
+/// Check that the user holds at least one of the required roles.
+/// Returns `Err(AppError::Forbidden)` on failure.
+pub fn require_any_role(user_roles: &HashSet<Role>, allowed: &[Role]) -> Result<(), AppError> {
+    for role in allowed {
+        if user_roles.contains(role) {
+            return Ok(());
+        }
+    }
+    Err(AppError::Forbidden(format!(
+        "one of the following roles is required: {}",
+        allowed
+            .iter()
+            .map(|r| r.as_db_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    )))
+}
+
 /// Extract the user's roles from request extensions.
 pub fn user_roles(parts: &Parts) -> HashSet<Role> {
     parts
@@ -181,5 +199,67 @@ mod tests {
         assert!(has_role(&parts, Role::Viewer));
         assert!(has_role(&parts, Role::Operator));
         assert!(!has_role(&parts, Role::SystemAdmin));
+    }
+
+    // -----------------------------------------------------------------------
+    // require_any_role tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_require_any_role_allows_match() {
+        let mut roles = HashSet::new();
+        roles.insert(Role::Viewer);
+        assert!(require_any_role(&roles, &[Role::Viewer, Role::Operator]).is_ok());
+    }
+
+    #[test]
+    fn test_require_any_role_denies_no_match() {
+        let mut roles = HashSet::new();
+        roles.insert(Role::Viewer);
+        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_require_any_role_empty_user_roles() {
+        let roles = HashSet::new();
+        let result = require_any_role(&roles, &[Role::SystemAdmin]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_require_any_role_system_admin_allowed_all() {
+        let mut roles = HashSet::new();
+        roles.insert(Role::SystemAdmin);
+        let all_roles = [
+            Role::Viewer,
+            Role::Operator,
+            Role::SecurityAnalyst,
+            Role::SecurityAdmin,
+            Role::SystemAdmin,
+        ];
+        assert!(require_any_role(&roles, &all_roles).is_ok());
+    }
+
+    #[test]
+    fn test_require_any_role_operator_can_view() {
+        let mut roles = HashSet::new();
+        roles.insert(Role::Operator);
+        let view_roles = [
+            Role::Viewer,
+            Role::Operator,
+            Role::SecurityAnalyst,
+            Role::SecurityAdmin,
+            Role::SystemAdmin,
+        ];
+        assert!(require_any_role(&roles, &view_roles).is_ok());
+    }
+
+    #[test]
+    fn test_require_any_role_operator_cannot_create() {
+        let mut roles = HashSet::new();
+        roles.insert(Role::Operator);
+        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
+        assert!(result.is_err());
     }
 }

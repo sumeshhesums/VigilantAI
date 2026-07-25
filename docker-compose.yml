@@ -2,6 +2,8 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    labels:
+      vigilantai.collect: "true"
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
@@ -21,6 +23,8 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    labels:
+      vigilantai.collect: "true"
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
@@ -38,6 +42,8 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     restart: unless-stopped
+    labels:
+      vigilantai.collect: "true"
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     environment:
@@ -78,6 +84,8 @@ services:
       context: ./ai-service
       dockerfile: Dockerfile
     restart: unless-stopped
+    labels:
+      vigilantai.collect: "true"
     ports:
       - "${AI_SERVICE_PORT:-8081}:8081"
     environment:
@@ -103,6 +111,8 @@ services:
       context: .
       dockerfile: camera-gateway/Dockerfile
     restart: unless-stopped
+    labels:
+      vigilantai.collect: "true"
     ports:
       - "${GATEWAY_PORT:-8082}:8082"
     environment:
@@ -131,13 +141,15 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
     restart: unless-stopped
+    labels:
+      vigilantai.collect: "true"
     ports:
       - "3000:3000"
     depends_on:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -148,6 +160,8 @@ services:
   prometheus:
     image: prom/prometheus:v2.54.1
     restart: unless-stopped
+    labels:
+      vigilantai.collect: "true"
     ports:
       - "9090:9090"
     volumes:
@@ -175,6 +189,8 @@ services:
   loki:
     image: grafana/loki:3.2.1
     restart: unless-stopped
+    labels:
+      vigilantai.collect: "true"
     ports:
       - "3100:3100"
     volumes:
@@ -217,6 +233,8 @@ services:
   grafana:
     image: grafana/grafana:11.2.2
     restart: unless-stopped
+    labels:
+      vigilantai.collect: "true"
     ports:
       - "${GRAFANA_PORT:-3001}:3000"
     environment:

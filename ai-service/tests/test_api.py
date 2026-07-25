@@ -32,13 +32,12 @@ class TestAPIContracts:
         response = client.post("/inference")
         assert response.status_code == 422
 
-    def test_batch_inference_endpoint_not_implemented(self, client: TestClient):
-        """Test batch inference endpoint returns 501."""
+    def test_batch_inference_endpoint_exists(self, client: TestClient):
+        """Test batch inference endpoint requires file upload."""
         response = client.post(
             "/inference/batch",
-            json={"requests": [{"image_url": "http://example.com/image.jpg"}]},
         )
-        assert response.status_code == 501
+        assert response.status_code == 422
 
     def test_docs_endpoint_exists(self, client: TestClient):
         """Test OpenAPI docs endpoint exists."""

@@ -1,9 +1,11 @@
 """Tests for the multi-model ModelManager."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from app.core.model_manager import ModelManager
-from app.models.factory import RTDETRModel, GroundingDINOModel
+from app.models.factory import GroundingDINOModel, RTDETRModel
 from app.models.loader import ModelLoader
 from app.models.registry import ModelRegistry
 
@@ -56,7 +58,8 @@ class TestModelManagerMultiModel:
     @pytest.mark.asyncio
     async def test_switch_model(self, manager: ModelManager):
         """Test switching to another model loads it if needed."""
-        result = await manager.switch_model("grounding-dino-tiny")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            result = await manager.switch_model("grounding-dino-tiny")
         assert manager.active_model_name == "grounding-dino-tiny"
         assert result["state"] == "loaded"
 
@@ -69,13 +72,15 @@ class TestModelManagerMultiModel:
     @pytest.mark.asyncio
     async def test_load_by_name(self, manager: ModelManager):
         """Test loading a model by name."""
-        result = await manager.load_by_name("rtdetr-l")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            result = await manager.load_by_name("rtdetr-l")
         assert result["state"] == "loaded"
 
     @pytest.mark.asyncio
     async def test_unload_by_name(self, manager: ModelManager):
         """Test unloading a model by name."""
-        await manager.load_by_name("rtdetr-l")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            await manager.load_by_name("rtdetr-l")
         await manager.unload_by_name("rtdetr-l")
         status = manager.get_status("rtdetr-l")
         assert status["state"] == "not_loaded"
@@ -83,15 +88,18 @@ class TestModelManagerMultiModel:
     @pytest.mark.asyncio
     async def test_unload_active_clears_active(self, manager: ModelManager):
         """Test unloading the active model clears active."""
-        await manager.load_by_name("rtdetr-l")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            await manager.load_by_name("rtdetr-l")
         await manager.unload_by_name("rtdetr-l")
         assert manager.active_model_name is None
 
     @pytest.mark.asyncio
     async def test_reload_by_name(self, manager: ModelManager):
         """Test reloading a model by name."""
-        await manager.load_by_name("rtdetr-l")
-        result = await manager.reload_by_name("rtdetr-l")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            await manager.load_by_name("rtdetr-l")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            result = await manager.reload_by_name("rtdetr-l")
         assert result["state"] == "loaded"
 
     def test_get_status(self, manager: ModelManager):
@@ -132,7 +140,8 @@ class TestModelManagerMultiModel:
     @pytest.mark.asyncio
     async def test_is_loaded_true_after_load(self, manager: ModelManager):
         """Test is_loaded is True when active model is loaded."""
-        await manager.load_by_name("rtdetr-l")
+        with patch("ultralytics.RTDETR", return_value=MagicMock()):
+            await manager.load_by_name("rtdetr-l")
         assert manager.is_loaded
 
     def test_metadata_legacy(self, manager: ModelManager):

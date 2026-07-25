@@ -13,10 +13,7 @@ pub async fn http_metrics_layer(
     next: Next,
 ) -> Response {
     let method = request.method().to_string();
-    let path = request
-        .uri()
-        .path()
-        .to_string();
+    let path = request.uri().path().to_string();
     let start = Instant::now();
 
     state.metrics.active_connections.inc();

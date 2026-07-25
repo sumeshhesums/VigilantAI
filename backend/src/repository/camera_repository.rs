@@ -63,6 +63,23 @@ impl CameraRepository for PostgresCameraRepository {
         Ok(records)
     }
 
+    async fn list_paginated(
+        &self,
+        pool: &PgPool,
+        offset: i64,
+        limit: i64,
+    ) -> anyhow::Result<Vec<Camera>> {
+        let records = sqlx::query_as::<_, Camera>(
+            "SELECT * FROM cameras ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?;
+
+        Ok(records)
+    }
+
     async fn update(
         &self,
         pool: &PgPool,

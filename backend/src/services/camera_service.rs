@@ -20,7 +20,10 @@ impl<R: CameraRepository> CameraService<R> {
         offset: u32,
         limit: u32,
     ) -> Result<(Vec<Camera>, i64)> {
-        let cameras = self.list_paginated(pool, offset, limit).await?;
+        let cameras = self
+            .repository
+            .list_paginated(pool, offset as i64, limit as i64)
+            .await?;
         let total = self.repository.count(pool).await?;
         Ok((cameras, total))
     }
@@ -128,16 +131,6 @@ impl<R: CameraRepository> CameraService<R> {
             .disable(pool, id)
             .await?
             .ok_or_else(|| anyhow!("camera not found"))
-    }
-
-    async fn list_paginated(&self, pool: &PgPool, offset: u32, limit: u32) -> Result<Vec<Camera>> {
-        let all = self.repository.list(pool).await?;
-        let start = offset as usize;
-        let end = (start + limit as usize).min(all.len());
-        if start >= all.len() {
-            return Ok(vec![]);
-        }
-        Ok(all[start..end].to_vec())
     }
 
     // -----------------------------------------------------------------------

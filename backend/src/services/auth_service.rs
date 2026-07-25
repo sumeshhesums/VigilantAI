@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use sqlx::postgres::PgPool;
 
+use crate::cache;
 use crate::dto::auth::AuthResponse;
 use crate::models::{CreateUser, User};
 use crate::repository::UserRepository;
@@ -135,10 +136,25 @@ impl<'a, R: UserRepository> AuthService<'a, R> {
         })
     }
 
-    /// Logout a user.
+    /// Logout a user by blacklisting the current access token.
     ///
-    /// Placeholder — does not blacklist tokens yet.
-    pub async fn logout(&self) -> Result<()> {
+    /// Stores the token's JTI in Redis with a TTL matching the token's
+    /// remaining lifetime. The auth middleware rejects blacklisted tokens.
+    pub async fn logout(
+        &self,
+        token: &str,
+        security: &Security,
+        redis_client: &redis::Client,
+    ) -> Result<()> {
+        let claims = jwt::validate_token(token, &security.decoding_key)?;
+
+        let now = chrono::Utc::now().timestamp() as u64;
+        let remaining = claims.exp.saturating_sub(now);
+
+        if remaining > 0 {
+            cache::blacklist_token(redis_client, &claims.jti, remaining).await?;
+        }
+
         Ok(())
     }
 }

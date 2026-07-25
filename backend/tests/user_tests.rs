@@ -12,6 +12,7 @@ use backend::config::notification::NotificationConfig;
 use backend::config::redis::RedisConfig;
 use backend::config::server::ServerConfig;
 use backend::config::AppConfig;
+use backend::metrics::AppMetrics;
 use backend::security::Security;
 use backend::state::AppState;
 
@@ -83,6 +84,7 @@ async fn setup() -> (PgPool, AppState) {
         postgres_pool: pool.clone(),
         redis_client,
         security,
+        metrics: AppMetrics::new(),
     };
     (pool, state)
 }
@@ -737,11 +739,11 @@ async fn test_remove_role() {
 
 // ─── Pagination Unit Tests (no DB required) ────────────
 
-use backend::dto::user::PaginationParams;
+use backend::dto::user::UserPaginationParams;
 
 #[test]
 fn test_pagination_default() {
-    let params = PaginationParams {
+    let params = UserPaginationParams {
         page: None,
         per_page: None,
     };
@@ -752,7 +754,7 @@ fn test_pagination_default() {
 
 #[test]
 fn test_pagination_page_2() {
-    let params = PaginationParams {
+    let params = UserPaginationParams {
         page: Some(2),
         per_page: Some(10),
     };
@@ -763,7 +765,7 @@ fn test_pagination_page_2() {
 
 #[test]
 fn test_pagination_clamp_max_per_page() {
-    let params = PaginationParams {
+    let params = UserPaginationParams {
         page: Some(1),
         per_page: Some(500),
     };
@@ -773,7 +775,7 @@ fn test_pagination_clamp_max_per_page() {
 
 #[test]
 fn test_pagination_clamp_min_page() {
-    let params = PaginationParams {
+    let params = UserPaginationParams {
         page: Some(0),
         per_page: Some(10),
     };

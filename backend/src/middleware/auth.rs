@@ -7,6 +7,7 @@ use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::Authorization;
 use axum_extra::TypedHeader;
 
+use crate::cache;
 use crate::errors::AppError;
 use crate::models::User;
 use crate::rbac::permissions::{self, Permission};
@@ -17,11 +18,17 @@ use crate::security::jwt;
 use crate::state::AppState;
 
 /// Authenticated user extracted from a valid JWT.
-pub struct AuthUser(pub User);
+///
+/// Carries the user record and the raw token string so downstream
+/// handlers (e.g. logout) can access the original token.
+pub struct AuthUser {
+    pub user: User,
+    pub token: String,
+}
 
 impl AuthUser {
     pub fn into_inner(self) -> User {
-        self.0
+        self.user
     }
 }
 
@@ -92,8 +99,18 @@ impl axum::extract::FromRequestParts<AppState> for AuthUser {
                 AppError::Unauthorized("missing or malformed Authorization header".into())
             })?;
 
+        let raw_token = bearer.token().to_string();
+
         let claims = jwt::validate_token(bearer.token(), &state.security.decoding_key)
             .map_err(|e| AppError::InvalidToken(e.to_string()))?;
+
+        // Check if this token has been blacklisted (logged out)
+        if cache::is_token_blacklisted(&state.redis_client, &claims.jti)
+            .await
+            .unwrap_or(false)
+        {
+            return Err(AppError::InvalidToken("token has been revoked".into()));
+        }
 
         let user_id = uuid::Uuid::parse_str(&claims.sub)
             .map_err(|e| AppError::InvalidToken(format!("invalid subject: {e}")))?;
@@ -107,7 +124,10 @@ impl axum::extract::FromRequestParts<AppState> for AuthUser {
         match user {
             Some(user) => {
                 let _ = attach_roles_and_permissions(parts, state, user.id).await;
-                Ok(AuthUser(user))
+                Ok(AuthUser {
+                    user,
+                    token: raw_token,
+                })
             }
             None => Err(AppError::Unauthorized("user not found".into())),
         }

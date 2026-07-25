@@ -1,5 +1,7 @@
 """Abstract base model for AI inference."""
 
+from __future__ import annotations
+
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -59,7 +61,7 @@ class ModelMetadata:
 class BaseModel(ABC):
     """Abstract base class for all AI models.
 
-    Subclasses must implement load_model and unload_model.
+    Subclasses must implement load_model, unload_model, and predict.
     The base class handles lifecycle state tracking.
     """
 
@@ -107,6 +109,32 @@ class BaseModel(ABC):
         """Unload the model from memory.
 
         Must set self._metadata.state to NOT_LOADED.
+        """
+
+    @abstractmethod
+    async def predict(
+        self,
+        image_bytes: bytes,
+        confidence_threshold: float = 0.5,
+        iou_threshold: float = 0.45,
+        source: str = "<unknown>",
+        **kwargs: Any,
+    ) -> Any:
+        """Run inference on raw image bytes.
+
+        Args:
+            image_bytes: Raw image bytes (JPEG, PNG, BMP).
+            confidence_threshold: Minimum detection confidence.
+            iou_threshold: IoU threshold for NMS.
+            source: Image source identifier.
+            **kwargs: Model-specific parameters (e.g., text_prompt for GroundingDINO).
+
+        Returns:
+            DetectionResponse with detection results.
+
+        Raises:
+            RuntimeError: If model is not loaded or inference fails.
+            ValueError: If image data is invalid.
         """
 
     async def load(self) -> ModelMetadata:
@@ -168,7 +196,6 @@ class BaseModel(ABC):
         self._metadata.state = ModelState.WARMING_UP
         logger.info("Warming up model %s", self._metadata.name)
 
-        # Placeholder: In production, run a dummy inference
         import asyncio
 
         await asyncio.sleep(0.05)

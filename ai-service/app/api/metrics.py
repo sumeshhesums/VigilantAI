@@ -1,4 +1,5 @@
 """Prometheus metrics endpoint."""
+
 from fastapi import APIRouter, Response
 from prometheus_client import (
     CollectorRegistry,

@@ -17,6 +17,12 @@ pub struct AppMetrics {
     pub active_connections: IntGauge,
 }
 
+impl Default for AppMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AppMetrics {
     pub fn new() -> Self {
         let registry = Registry::new();
@@ -39,37 +45,40 @@ impl AppMetrics {
         )
         .unwrap();
 
-        let jwt_auth_success_total = IntCounter::with_opts(
-            prometheus::opts!("vigilantai_jwt_auth_success_total", "JWT authentication successes"),
-        )
+        let jwt_auth_success_total = IntCounter::with_opts(prometheus::opts!(
+            "vigilantai_jwt_auth_success_total",
+            "JWT authentication successes"
+        ))
         .unwrap();
 
-        let jwt_auth_failure_total = IntCounter::with_opts(
-            prometheus::opts!("vigilantai_jwt_auth_failure_total", "JWT authentication failures"),
-        )
+        let jwt_auth_failure_total = IntCounter::with_opts(prometheus::opts!(
+            "vigilantai_jwt_auth_failure_total",
+            "JWT authentication failures"
+        ))
         .unwrap();
 
-        let rbac_authorization_failures_total = IntCounter::with_opts(
-            prometheus::opts!(
-                "vigilantai_rbac_authorization_failures_total",
-                "RBAC authorization failures"
-            ),
-        )
+        let rbac_authorization_failures_total = IntCounter::with_opts(prometheus::opts!(
+            "vigilantai_rbac_authorization_failures_total",
+            "RBAC authorization failures"
+        ))
         .unwrap();
 
-        let incidents_created_total = IntCounter::with_opts(
-            prometheus::opts!("vigilantai_incidents_created_total", "Incidents created"),
-        )
+        let incidents_created_total = IntCounter::with_opts(prometheus::opts!(
+            "vigilantai_incidents_created_total",
+            "Incidents created"
+        ))
         .unwrap();
 
-        let evidence_uploads_total = IntCounter::with_opts(
-            prometheus::opts!("vigilantai_evidence_uploads_total", "Evidence uploads"),
-        )
+        let evidence_uploads_total = IntCounter::with_opts(prometheus::opts!(
+            "vigilantai_evidence_uploads_total",
+            "Evidence uploads"
+        ))
         .unwrap();
 
-        let notifications_sent_total = IntCounter::with_opts(
-            prometheus::opts!("vigilantai_notifications_sent_total", "Notifications sent"),
-        )
+        let notifications_sent_total = IntCounter::with_opts(prometheus::opts!(
+            "vigilantai_notifications_sent_total",
+            "Notifications sent"
+        ))
         .unwrap();
 
         let db_query_duration_seconds = HistogramVec::new(
@@ -84,27 +93,42 @@ impl AppMetrics {
         )
         .unwrap();
 
-        let active_connections = IntGauge::with_opts(
-            prometheus::opts!("vigilantai_active_connections", "Active connections"),
-        )
+        let active_connections = IntGauge::with_opts(prometheus::opts!(
+            "vigilantai_active_connections",
+            "Active connections"
+        ))
         .unwrap();
 
-        registry.register(Box::new(http_requests_total.clone())).unwrap();
+        registry
+            .register(Box::new(http_requests_total.clone()))
+            .unwrap();
         registry
             .register(Box::new(http_request_duration_seconds.clone()))
             .unwrap();
-        registry.register(Box::new(jwt_auth_success_total.clone())).unwrap();
-        registry.register(Box::new(jwt_auth_failure_total.clone())).unwrap();
+        registry
+            .register(Box::new(jwt_auth_success_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(jwt_auth_failure_total.clone()))
+            .unwrap();
         registry
             .register(Box::new(rbac_authorization_failures_total.clone()))
             .unwrap();
-        registry.register(Box::new(incidents_created_total.clone())).unwrap();
-        registry.register(Box::new(evidence_uploads_total.clone())).unwrap();
-        registry.register(Box::new(notifications_sent_total.clone())).unwrap();
+        registry
+            .register(Box::new(incidents_created_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(evidence_uploads_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(notifications_sent_total.clone()))
+            .unwrap();
         registry
             .register(Box::new(db_query_duration_seconds.clone()))
             .unwrap();
-        registry.register(Box::new(active_connections.clone())).unwrap();
+        registry
+            .register(Box::new(active_connections.clone()))
+            .unwrap();
 
         Self {
             registry,

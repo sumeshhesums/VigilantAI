@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
@@ -11,28 +9,11 @@ use crate::dto::camera::{
 use crate::errors::AppError;
 use crate::middleware::auth::{AuthUser, UserRoles};
 use crate::models::Camera;
+use crate::rbac::guards::require_any_role;
 use crate::rbac::roles::Role;
 use crate::repository::camera_repository::PostgresCameraRepository;
 use crate::services::CameraService;
 use crate::state::AppState;
-
-/// Check that the user holds at least one of the required roles.
-/// Returns `Err(AppError::Forbidden)` on failure.
-fn require_any_role(user_roles: &HashSet<Role>, allowed: &[Role]) -> Result<(), AppError> {
-    for role in allowed {
-        if user_roles.contains(role) {
-            return Ok(());
-        }
-    }
-    Err(AppError::Forbidden(format!(
-        "one of the following roles is required: {}",
-        allowed
-            .iter()
-            .map(|r| r.as_db_str())
-            .collect::<Vec<_>>()
-            .join(", ")
-    )))
-}
 
 fn camera_response(camera: Camera) -> CameraResponse {
     CameraResponse {
@@ -55,7 +36,7 @@ fn camera_response(camera: Camera) -> CameraResponse {
 // Allowed: Viewer, Operator, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn list_cameras(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Query(params): Query<CameraPaginationParams>,
@@ -80,12 +61,18 @@ pub async fn list_cameras(
         .map_err(AppError::Internal)?;
 
     let page = params.page.unwrap_or(1).max(1);
+    let pages = if limit > 0 {
+        (total as u32).div_ceil(limit).max(1)
+    } else {
+        1
+    };
 
     Ok(Json(CameraListResponse {
         cameras: cameras.into_iter().map(camera_response).collect(),
         total,
         page,
         per_page: limit,
+        pages,
     }))
 }
 
@@ -94,7 +81,7 @@ pub async fn list_cameras(
 // Allowed: Viewer, Operator, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn get_camera(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -131,7 +118,7 @@ pub async fn get_camera(
 // Allowed: SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn create_camera(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Json(body): Json<CreateCameraRequest>,
@@ -170,7 +157,7 @@ pub async fn create_camera(
 // Allowed: SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn update_camera(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -211,7 +198,7 @@ pub async fn update_camera(
 // Allowed: SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn delete_camera(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -240,7 +227,7 @@ pub async fn delete_camera(
 // Allowed: Operator, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn enable_camera(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -272,7 +259,7 @@ pub async fn enable_camera(
 // Allowed: Operator, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn disable_camera(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -297,44 +284,4 @@ pub async fn disable_camera(
         })?;
 
     Ok(Json(camera_response(camera)))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_require_any_role_allows_match() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Viewer);
-        assert!(require_any_role(&roles, &[Role::Viewer, Role::Operator]).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_denies_no_match() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Viewer);
-        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_empty_user_roles() {
-        let roles = HashSet::new();
-        let result = require_any_role(&roles, &[Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_system_admin_allowed_all() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::SystemAdmin);
-        let all_read = [
-            Role::Viewer,
-            Role::Operator,
-            Role::SecurityAdmin,
-            Role::SystemAdmin,
-        ];
-        assert!(require_any_role(&roles, &all_read).is_ok());
-    }
 }

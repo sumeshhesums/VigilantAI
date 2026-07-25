@@ -49,6 +49,7 @@ pub struct IncidentListResponse {
     pub total: i64,
     pub page: u32,
     pub per_page: u32,
+    pub pages: u32,
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use axum::extract::{Multipart, Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
@@ -7,28 +5,12 @@ use axum::Json;
 use crate::dto::evidence::{EvidenceListResponse, EvidencePaginationParams, EvidenceResponse};
 use crate::errors::AppError;
 use crate::middleware::auth::{AuthUser, UserRoles};
+use crate::rbac::guards::require_any_role;
 use crate::rbac::roles::Role;
 use crate::repository::evidence_repository::PostgresEvidenceRepository;
 use crate::services::EvidenceService;
 use crate::state::AppState;
 use crate::storage::filesystem::FilesystemStorage;
-
-/// Check that the user holds at least one of the required roles.
-fn require_any_role(user_roles: &HashSet<Role>, allowed: &[Role]) -> Result<(), AppError> {
-    for role in allowed {
-        if user_roles.contains(role) {
-            return Ok(());
-        }
-    }
-    Err(AppError::Forbidden(format!(
-        "one of the following roles is required: {}",
-        allowed
-            .iter()
-            .map(|r| r.as_db_str())
-            .collect::<Vec<_>>()
-            .join(", ")
-    )))
-}
 
 fn evidence_response(evidence: crate::models::Evidence) -> EvidenceResponse {
     EvidenceResponse {
@@ -57,7 +39,7 @@ fn make_service(
 // Allowed: Operator, SecurityAnalyst, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn upload_evidence(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(incident_id): Path<uuid::Uuid>,
@@ -142,7 +124,7 @@ pub async fn upload_evidence(
 // Allowed: Viewer, Operator, SecurityAnalyst, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn list_evidence(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(incident_id): Path<uuid::Uuid>,
@@ -174,7 +156,7 @@ pub async fn list_evidence(
 // Allowed: Viewer, Operator, SecurityAnalyst, SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn get_evidence(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -208,7 +190,7 @@ pub async fn get_evidence(
 // Allowed: SecurityAdmin, SystemAdmin
 // ---------------------------------------------------------------------------
 pub async fn delete_evidence(
-    AuthUser(_user): AuthUser,
+    AuthUser { .. }: AuthUser,
     UserRoles(roles): UserRoles,
     State(state): State<AppState>,
     Path(id): Path<uuid::Uuid>,
@@ -234,95 +216,3 @@ pub async fn delete_evidence(
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_require_any_role_allows_match() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Operator);
-        assert!(require_any_role(&roles, &[Role::Operator, Role::SecurityAdmin]).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_denies_no_match() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Viewer);
-        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_empty_user_roles() {
-        let roles = HashSet::new();
-        let result = require_any_role(&roles, &[Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_system_admin_allowed_all() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::SystemAdmin);
-        let all_view = [
-            Role::Viewer,
-            Role::Operator,
-            Role::SecurityAnalyst,
-            Role::SecurityAdmin,
-            Role::SystemAdmin,
-        ];
-        assert!(require_any_role(&roles, &all_view).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_operator_can_view() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Operator);
-        let view_roles = [
-            Role::Viewer,
-            Role::Operator,
-            Role::SecurityAnalyst,
-            Role::SecurityAdmin,
-            Role::SystemAdmin,
-        ];
-        assert!(require_any_role(&roles, &view_roles).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_operator_cannot_delete() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::Operator);
-        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_security_analyst_can_view() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::SecurityAnalyst);
-        let view_roles = [
-            Role::Viewer,
-            Role::Operator,
-            Role::SecurityAnalyst,
-            Role::SecurityAdmin,
-            Role::SystemAdmin,
-        ];
-        assert!(require_any_role(&roles, &view_roles).is_ok());
-    }
-
-    #[test]
-    fn test_require_any_role_security_analyst_cannot_delete() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::SecurityAnalyst);
-        let result = require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_require_any_role_security_admin_can_delete() {
-        let mut roles = HashSet::new();
-        roles.insert(Role::SecurityAdmin);
-        assert!(require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin]).is_ok());
-    }
-}
