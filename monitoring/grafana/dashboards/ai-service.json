@@ -738,6 +738,59 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "type": "row",
+      "title": "Logs",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 },
+      "id": 200,
+      "panels": []
+    },
+    {
+      "type": "logs",
+      "title": "AI Service Logs",
+      "id": 201,
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 14 },
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "targets": [
+        {
+          "expr": "{service=\"ai-service\", environment=\"$environment\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Inference Errors",
+      "id": 202,
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 14 },
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "targets": [
+        {
+          "expr": "{service=\"ai-service\", environment=\"$environment\"} |~ \"(?i)(error|fail|exception|timeout)\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
     }
   ],
   "schemaVersion": 39,

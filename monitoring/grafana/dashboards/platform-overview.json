@@ -1334,6 +1334,39 @@
           "instant": true
         }
       ]
+    },
+    {
+      "type": "row",
+      "title": "Logs",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "id": 200,
+      "panels": []
+    },
+    {
+      "type": "logs",
+      "title": "Recent Logs",
+      "id": 201,
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 19 },
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "targets": [
+        {
+          "expr": "{environment=\"$environment\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      }
     }
   ]
 }

@@ -1251,6 +1251,66 @@
       ],
       "title": "Query Duration Heatmap",
       "type": "heatmap"
+    },
+    {
+      "type": "row",
+      "title": "Logs",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "id": 200,
+      "panels": []
+    },
+    {
+      "type": "logs",
+      "title": "Backend Logs",
+      "id": 201,
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 16 },
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "targets": [
+        {
+          "expr": "{service=\"backend\", environment=\"$environment\"} | level=\"error\"",
+          "refId": "A"
+        },
+        {
+          "expr": "{service=\"backend\", environment=\"$environment\"}",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Error Logs",
+      "id": 202,
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "targets": [
+        {
+          "expr": "{service=\"backend\", environment=\"$environment\"} |~ \"(?i)(error|err|panic|fatal|exception)\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
     }
   ],
   "refresh": "30s",
