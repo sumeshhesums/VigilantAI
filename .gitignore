@@ -41,6 +41,14 @@ Thumbs.db
 # Docker
 docker-compose.override.yml
 
+# Generated files
+keys/
+*.pem
+
+# Temporary files
+temp_*
+tok.txt
+
 # Testing
 coverage/
 htmlcov/

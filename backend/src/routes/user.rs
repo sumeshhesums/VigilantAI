@@ -8,13 +8,13 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(user::list_users).post(user::create_user))
         .route(
-            "/{id}",
+            "/:id",
             get(user::get_user)
                 .patch(user::update_user)
                 .delete(user::delete_user),
         )
         .route(
-            "/{id}/roles",
+            "/:id/roles",
             post(user::assign_role).delete(user::remove_role),
         )
 }

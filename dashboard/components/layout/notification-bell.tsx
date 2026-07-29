@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-notifications";
 
 export function NotificationBell() {
-  const { data } = useNotifications({ status: "failed", per_page: 5 });
-  const failedCount = data?.total || 0;
+  const { data } = useNotifications({ per_page: 100 });
+  const failedCount = data?.data?.filter((n) => n.status === "failed").length || 0;
 
   return (
     <Button variant="ghost" size="icon" className="relative">

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useCreateUser, useUpdateUser, useUser } from "@/hooks/use-users";
+import { toast } from "@/components/ui/toast";
 
 interface UserFormProps {
   userId?: string;
@@ -40,12 +41,12 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
     if (isEditing && userId) {
       updateMutation.mutate(
         { id: userId, data: { email: data.email, first_name: data.first_name, last_name: data.last_name } },
-        { onSuccess }
+        { onSuccess: () => { toast({ title: "User updated", variant: "success" }); onSuccess?.(); } }
       );
     } else {
       createMutation.mutate(
         { email: data.email, first_name: data.first_name, last_name: data.last_name, password: data.password || "" },
-        { onSuccess }
+        { onSuccess: () => { toast({ title: "User created", variant: "success" }); onSuccess?.(); } }
       );
     }
   };

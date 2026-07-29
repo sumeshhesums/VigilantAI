@@ -14,6 +14,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { formatBytes, formatDateTime } from "@/lib/utils";
 import { Search, Download, Trash2, Shield, FileVideo, Image, FileText } from "lucide-react";
 import { EvidencePreview } from "./evidence-preview";
+import { toast } from "@/components/ui/toast";
 
 const getEvidenceIcon = (contentType: string) => {
   if (contentType.startsWith("video/")) return FileVideo;
@@ -134,7 +135,7 @@ export function EvidenceGallery({ incidentId }: EvidenceGalleryProps) {
         confirmLabel="Delete"
         onConfirm={() => {
           if (deleteId) {
-            deleteMutation.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
+            deleteMutation.mutate(deleteId, { onSuccess: () => { toast({ title: "Evidence deleted", variant: "success" }); setDeleteId(null); } });
           }
         }}
         loading={deleteMutation.isPending}

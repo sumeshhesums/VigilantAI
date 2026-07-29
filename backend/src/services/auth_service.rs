@@ -68,7 +68,13 @@ impl<'a, R: UserRepository> AuthService<'a, R> {
             return Err(anyhow!("invalid credentials"));
         }
 
-        let role = "user".to_string();
+        let roles = self
+            .repository
+            .find_roles_by_user_id(pool, user.id)
+            .await
+            .unwrap_or_default();
+        let role = roles.first().cloned().unwrap_or_else(|| "viewer".to_string());
+
         let access_token = jwt::create_access_token(
             user.id,
             &user.email,
@@ -111,7 +117,12 @@ impl<'a, R: UserRepository> AuthService<'a, R> {
             .await?
             .ok_or_else(|| anyhow!("user not found"))?;
 
-        let role = "user".to_string();
+        let roles = self
+            .repository
+            .find_roles_by_user_id(pool, user.id)
+            .await
+            .unwrap_or_default();
+        let role = roles.first().cloned().unwrap_or_else(|| "viewer".to_string());
         let access_token = jwt::create_access_token(
             user.id,
             &user.email,

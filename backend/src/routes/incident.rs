@@ -12,11 +12,11 @@ pub fn routes() -> Router<AppState> {
             get(incident::list_incidents).post(incident::create_incident),
         )
         .route(
-            "/{id}",
+            "/:id",
             get(incident::get_incident).patch(incident::update_incident),
         )
         .route(
-            "/{id}/evidence",
+            "/:id/evidence",
             get(evidence::list_evidence).post(evidence::upload_evidence),
         )
 }

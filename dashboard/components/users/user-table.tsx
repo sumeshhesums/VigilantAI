@@ -12,6 +12,7 @@ import { TableSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { formatDate } from "@/lib/utils";
 import { Plus, Trash2, Edit } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 
 interface UserTableProps {
   onEdit?: (id: string) => void;
@@ -122,7 +123,7 @@ export function UserTable({ onEdit, onCreate }: UserTableProps) {
         confirmLabel="Deactivate"
         onConfirm={() => {
           if (deleteId) {
-            deleteMutation.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
+            deleteMutation.mutate(deleteId, { onSuccess: () => { toast({ title: "User deactivated", variant: "success" }); setDeleteId(null); } });
           }
         }}
         loading={deleteMutation.isPending}

@@ -22,7 +22,7 @@
         "type": "query",
         "label": "Environment",
         "query": "label_values(up, environment)",
-        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
         "refresh": 2,
         "sort": 1,
         "includeAll": false,
@@ -34,7 +34,7 @@
         "type": "query",
         "label": "Instance",
         "query": "label_values(up{job=\"vigilantai-dashboard\", environment=\"$environment\"}, instance)",
-        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
         "refresh": 2,
         "sort": 1,
         "includeAll": false,
@@ -73,7 +73,7 @@
       "title": "Dashboard Status",
       "gridPos": { "h": 5, "w": 8, "x": 0, "y": 1 },
       "id": 2,
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -118,7 +118,7 @@
           "refId": "A",
           "expr": "vigilantai_dashboard_up{job=\"vigilantai-dashboard\", environment=\"$environment\", instance=\"$instance\"}",
           "legendFormat": "Status",
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" }
         }
       ]
     },
@@ -127,7 +127,7 @@
       "title": "Uptime",
       "gridPos": { "h": 5, "w": 8, "x": 8, "y": 1 },
       "id": 3,
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -159,7 +159,7 @@
           "refId": "A",
           "expr": "vigilantai_dashboard_uptime_seconds{job=\"vigilantai-dashboard\", environment=\"$environment\", instance=\"$instance\"}",
           "legendFormat": "Uptime",
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" }
         }
       ]
     },
@@ -168,7 +168,7 @@
       "title": "Build Version",
       "gridPos": { "h": 5, "w": 8, "x": 16, "y": 1 },
       "id": 4,
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -199,7 +199,7 @@
           "refId": "A",
           "expr": "vigilantai_dashboard_info{job=\"vigilantai-dashboard\", environment=\"$environment\", instance=\"$instance\"}",
           "legendFormat": "{{version}}",
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" }
         }
       ]
     },
@@ -216,7 +216,7 @@
       "title": "Dashboard Up Over Time",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
       "id": 6,
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -266,7 +266,7 @@
           "refId": "A",
           "expr": "vigilantai_dashboard_up{job=\"vigilantai-dashboard\", environment=\"$environment\", instance=\"$instance\"}",
           "legendFormat": "Up",
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" }
         }
       ]
     },
@@ -275,7 +275,7 @@
       "title": "Uptime Over Time",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
       "id": 7,
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -312,7 +312,7 @@
           "refId": "A",
           "expr": "vigilantai_dashboard_uptime_seconds{job=\"vigilantai-dashboard\", environment=\"$environment\", instance=\"$instance\"}",
           "legendFormat": "Uptime",
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" }
         }
       ]
     },
@@ -329,7 +329,7 @@
       "title": "Active Alerts for Dashboard",
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
       "id": 9,
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -421,7 +421,7 @@
           "refId": "A",
           "expr": "ALERTS{alertname=\"DashboardDown\", alertstate=\"firing\", job=\"vigilantai-dashboard\", environment=\"$environment\", instance=\"$instance\"}",
           "legendFormat": "{{alertname}}",
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "format": "table",
           "instant": true
         }

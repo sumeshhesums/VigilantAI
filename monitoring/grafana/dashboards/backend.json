@@ -36,7 +36,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -116,7 +116,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(vigilantai_http_requests_total{job=\"vigilantai-backend\"}[5m])) by (endpoint)",
@@ -131,7 +131,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -211,7 +211,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(vigilantai_http_requests_total{job=\"vigilantai-backend\"}[5m])) by (status)",
@@ -226,7 +226,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -306,7 +306,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.50, sum(rate(vigilantai_http_request_duration_seconds_bucket{job=\"vigilantai-backend\"}[5m])) by (le))",
@@ -317,7 +317,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum(rate(vigilantai_http_request_duration_seconds_bucket{job=\"vigilantai-backend\"}[5m])) by (le))",
@@ -328,7 +328,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, sum(rate(vigilantai_http_request_duration_seconds_bucket{job=\"vigilantai-backend\"}[5m])) by (le))",
@@ -343,7 +343,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -398,7 +398,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "vigilantai_active_connections{job=\"vigilantai-backend\"}",
@@ -425,7 +425,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -505,7 +505,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "rate(vigilantai_jwt_auth_success_total{job=\"vigilantai-backend\"}[5m])",
@@ -520,7 +520,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -600,7 +600,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "rate(vigilantai_jwt_auth_failure_total{job=\"vigilantai-backend\"}[5m])",
@@ -615,7 +615,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -670,7 +670,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "increase(vigilantai_rbac_authorization_failures_total{job=\"vigilantai-backend\"}[1h])",
@@ -697,7 +697,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -777,7 +777,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "rate(vigilantai_incidents_created_total{job=\"vigilantai-backend\"}[5m])",
@@ -792,7 +792,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -872,7 +872,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "rate(vigilantai_evidence_uploads_total{job=\"vigilantai-backend\"}[5m])",
@@ -887,7 +887,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -967,7 +967,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "rate(vigilantai_notifications_sent_total{job=\"vigilantai-backend\"}[5m])",
@@ -982,7 +982,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1037,7 +1037,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "sum(vigilantai_incidents_created_total{job=\"vigilantai-backend\"})",
@@ -1064,7 +1064,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1144,7 +1144,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum(rate(vigilantai_db_query_duration_seconds_bucket{job=\"vigilantai-backend\"}[5m])) by (le, query))",
@@ -1159,7 +1159,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1239,7 +1239,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(vigilantai_db_query_duration_seconds_bucket{job=\"vigilantai-backend\"}[5m])) by (le)",
@@ -1267,7 +1267,7 @@
       "gridPos": { "h": 8, "w": 16, "x": 0, "y": 16 },
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "ds-loki"
       },
       "targets": [
         {
@@ -1296,7 +1296,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "ds-loki"
       },
       "targets": [
         {

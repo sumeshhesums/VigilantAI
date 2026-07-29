@@ -1,0 +1,96 @@
+warning: in the working copy of '.env.example', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Makefile', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/dto/mod.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/handlers/auth.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/handlers/mod.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/repository/incident_repository.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/repository/notification_repository.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/camera.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/evidence.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/incident.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/mod.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/notification.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/routes/user.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/services/auth_service.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/app/(auth)/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/app/providers.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/components/cameras/camera-form.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/components/cameras/camera-table.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/components/evidence/evidence-gallery.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/components/incidents/incident-detail-drawer.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/components/layout/notification-bell.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/components/notifications/notification-table.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/components/users/user-form.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/components/users/user-table.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/hooks/use-dashboard.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/lib/axios-client.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/lib/constants.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/lib/validators.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/providers/auth-provider.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/services/auth.service.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/services/camera.service.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/services/evidence.service.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/services/health.service.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/services/incident.service.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/services/notification.service.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/services/role.service.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/services/user.service.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'dashboard/types/notification.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docker-compose.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'monitoring/grafana/dashboards/ai-service.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'monitoring/grafana/dashboards/backend.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'monitoring/grafana/dashboards/camera-gateway.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'monitoring/grafana/dashboards/dashboard-monitoring.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'monitoring/grafana/dashboards/platform-overview.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'monitoring/grafana/provisioning/datasources/prometheus.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'monitoring/prometheus/prometheus.yml', LF will be replaced by CRLF the next time Git touches it
+ .env.example                                       |  4 [32m+[m[31m-[m
+ .gitignore                                         |  8 [32m+++[m
+ Makefile                                           | 39 [32m++++++++++[m[31m--[m
+ backend/src/dto/mod.rs                             |  1 [32m+[m
+ backend/src/handlers/auth.rs                       | 20 [32m++++[m[31m--[m
+ backend/src/handlers/mod.rs                        |  2 [32m+[m
+ backend/src/repository/incident_repository.rs      | 20 [32m+++[m[31m---[m
+ backend/src/repository/notification_repository.rs  | 22 [32m++++[m[31m---[m
+ backend/src/routes/camera.rs                       |  6 [32m+[m[31m-[m
+ backend/src/routes/evidence.rs                     |  2 [32m+[m[31m-[m
+ backend/src/routes/incident.rs                     |  4 [32m+[m[31m-[m
+ backend/src/routes/mod.rs                          |  6 [32m+[m[31m-[m
+ backend/src/routes/notification.rs                 |  2 [32m+[m[31m-[m
+ backend/src/routes/user.rs                         |  4 [32m+[m[31m-[m
+ backend/src/services/auth_service.rs               | 15 [32m++++[m[31m-[m
+ dashboard/app/(auth)/layout.tsx                    | 15 [32m++++[m[31m-[m
+ dashboard/app/page.tsx                             |  5 [31m--[m
+ dashboard/app/providers.tsx                        |  6 [32m+[m[31m-[m
+ dashboard/components/cameras/camera-form.tsx       |  5 [32m+[m[31m-[m
+ dashboard/components/cameras/camera-table.tsx      |  7 [32m+[m[31m-[m
+ dashboard/components/evidence/evidence-gallery.tsx |  3 [32m+[m[31m-[m
+ .../incidents/incident-detail-drawer.tsx           |  3 [32m+[m[31m-[m
+ dashboard/components/layout/notification-bell.tsx  |  4 [32m+[m[31m-[m
+ .../notifications/notification-table.tsx           | 14 [32m++[m[31m--[m
+ dashboard/components/users/user-form.tsx           |  5 [32m+[m[31m-[m
+ dashboard/components/users/user-table.tsx          |  3 [32m+[m[31m-[m
+ dashboard/hooks/use-dashboard.ts                   | 51 [32m++++++++++[m[31m-----[m
+ dashboard/lib/axios-client.ts                      |  4 [32m+[m[31m-[m
+ dashboard/lib/constants.ts                         |  3 [32m+[m[31m-[m
+ dashboard/lib/validators.ts                        |  2 [32m+[m[31m-[m
+ dashboard/providers/auth-provider.tsx              | 36 [32m++++++++[m[31m---[m
+ dashboard/services/auth.service.ts                 |  8 [32m+[m[31m--[m
+ dashboard/services/camera.service.ts               | 58 [32m+++++++++++++[m[31m----[m
+ dashboard/services/evidence.service.ts             | 29 [32m++++++[m[31m---[m
+ dashboard/services/health.service.ts               | 26 [32m+++++++[m[31m-[m
+ dashboard/services/incident.service.ts             | 38 [32m++++++++[m[31m---[m
+ dashboard/services/notification.service.ts         | 51 [32m++++++++++++[m[31m---[m
+ dashboard/services/role.service.ts                 | 17 [32m+++[m[31m--[m
+ dashboard/services/user.service.ts                 | 44 [32m+++++++++[m[31m----[m
+ dashboard/types/notification.ts                    |  4 [32m+[m[31m-[m
+ docker-compose.yml                                 |  6 [31m--[m
+ monitoring/grafana/dashboards/ai-service.json      | 60 [32m+++++++++[m[31m---------[m
+ monitoring/grafana/dashboards/backend.json         | 60 [32m+++++++++[m[31m---------[m
+ monitoring/grafana/dashboards/camera-gateway.json  | 32 [32m+++++[m[31m-----[m
+ .../grafana/dashboards/dashboard-monitoring.json   | 28 [32m++++[m[31m----[m
+ .../grafana/dashboards/platform-overview.json      | 74 [32m+++++++++++[m[31m-----------[m
+ .../provisioning/datasources/prometheus.yml        |  2 [32m+[m
+ monitoring/prometheus/prometheus.yml               | 14 [31m----[m
+ 48 files changed, 559 insertions(+), 313 deletions(-)

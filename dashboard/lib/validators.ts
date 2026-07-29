@@ -51,7 +51,7 @@ export const createIncidentSchema = z.object({
 
 export const sendNotificationSchema = z.object({
   incident_id: z.string().uuid("Invalid incident ID"),
-  channel: z.enum(["email", "webhook", "dashboard"]),
+  channel: z.enum(["email", "webhook"]),
   recipient: z.string().min(1, "Recipient is required"),
 });
 

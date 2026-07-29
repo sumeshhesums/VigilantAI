@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SEVERITY_COLORS, STATUS_COLORS } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
 import { Search, Plus, Trash2, Power, PowerOff } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 
 interface CameraTableProps {
   onEdit?: (id: string) => void;
@@ -30,7 +31,7 @@ export function CameraTable({ onEdit, onCreate }: CameraTableProps) {
   const { data, isLoading, error, refetch } = useCameras({
     page,
     per_page: perPage,
-    status: statusFilter || undefined,
+    status: statusFilter && statusFilter !== "all" ? statusFilter : undefined,
   });
 
   const deleteMutation = useDeleteCamera();
@@ -122,7 +123,7 @@ export function CameraTable({ onEdit, onCreate }: CameraTableProps) {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => camera.enabled ? disableMutation.mutate(camera.id) : enableMutation.mutate(camera.id)}
+                            onClick={() => camera.enabled ? disableMutation.mutate(camera.id, { onSuccess: () => toast({ title: "Camera disabled", variant: "success" }) }) : enableMutation.mutate(camera.id, { onSuccess: () => toast({ title: "Camera enabled", variant: "success" }) })}
                           >
                             {camera.enabled ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                           </Button>
@@ -155,7 +156,7 @@ export function CameraTable({ onEdit, onCreate }: CameraTableProps) {
         confirmLabel="Delete"
         onConfirm={() => {
           if (deleteId) {
-            deleteMutation.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
+            deleteMutation.mutate(deleteId, { onSuccess: () => { toast({ title: "Camera deleted", variant: "success" }); setDeleteId(null); } });
           }
         }}
         loading={deleteMutation.isPending}

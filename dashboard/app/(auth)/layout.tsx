@@ -1,19 +1,28 @@
 "use client";
 
 import { useAuth } from "@/providers/auth-provider";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      redirect("/");
+      router.replace("/");
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, router]);
 
   if (isLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

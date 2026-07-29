@@ -42,7 +42,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "ds-prometheus"
         },
         "definition": "label_values(up, environment)",
         "hide": 0,
@@ -70,7 +70,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "ds-prometheus"
         },
         "definition": "label_values(up{environment=\"$environment\"}, instance)",
         "hide": 0,
@@ -109,7 +109,7 @@
       "gridPos": { "h": 5, "w": 4, "x": 0, "y": 1 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -159,7 +159,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "up{job=\"vigilantai-backend\", environment=\"$environment\", instance=~\"$instance\"}",
           "legendFormat": "{{instance}}",
@@ -175,7 +175,7 @@
       "gridPos": { "h": 5, "w": 4, "x": 4, "y": 1 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -225,7 +225,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "up{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=~\"$instance\"}",
           "legendFormat": "{{instance}}",
@@ -241,7 +241,7 @@
       "gridPos": { "h": 5, "w": 4, "x": 8, "y": 1 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -291,7 +291,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "up{job=\"vigilantai-camera-gateway\", environment=\"$environment\", instance=~\"$instance\"}",
           "legendFormat": "{{instance}}",
@@ -307,7 +307,7 @@
       "gridPos": { "h": 5, "w": 4, "x": 12, "y": 1 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -357,7 +357,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "up{job=\"vigilantai-dashboard\", environment=\"$environment\", instance=~\"$instance\"}",
           "legendFormat": "{{instance}}",
@@ -373,7 +373,7 @@
       "gridPos": { "h": 5, "w": 4, "x": 16, "y": 1 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -423,7 +423,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "up{job=\"vigilantai-postgres\", environment=\"$environment\", instance=~\"$instance\"}",
           "legendFormat": "{{instance}}",
@@ -439,7 +439,7 @@
       "gridPos": { "h": 5, "w": 4, "x": 20, "y": 1 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -489,7 +489,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "up{job=\"vigilantai-redis\", environment=\"$environment\", instance=~\"$instance\"}",
           "legendFormat": "{{instance}}",
@@ -513,7 +513,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 7 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -577,7 +577,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "sum(rate(vigilantai_http_requests_total{environment=\"$environment\", instance=~\"$instance\"}[5m]))",
           "legendFormat": "Requests/s",
@@ -593,7 +593,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 7 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -660,7 +660,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "sum(rate(vigilantai_http_requests_total{status=~\"5..\", environment=\"$environment\", instance=~\"$instance\"}[5m])) / sum(rate(vigilantai_http_requests_total{environment=\"$environment\", instance=~\"$instance\"}[5m])) * 100",
           "legendFormat": "Error %",
@@ -676,7 +676,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 7 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -743,7 +743,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "histogram_quantile(0.95, sum(rate(vigilantai_http_request_duration_seconds_bucket{environment=\"$environment\", instance=~\"$instance\"}[5m])) by (le))",
           "legendFormat": "P95 Latency",
@@ -767,7 +767,7 @@
       "gridPos": { "h": 5, "w": 6, "x": 0, "y": 16 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -803,7 +803,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "sum(increase(vigilantai_incidents_created_total{environment=\"$environment\", instance=~\"$instance\"}[1h]))",
           "legendFormat": "Last Hour",
@@ -819,7 +819,7 @@
       "gridPos": { "h": 5, "w": 6, "x": 6, "y": 16 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -855,7 +855,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "sum(increase(vigilantai_evidence_uploads_total{environment=\"$environment\", instance=~\"$instance\"}[1h]))",
           "legendFormat": "Last Hour",
@@ -871,7 +871,7 @@
       "gridPos": { "h": 5, "w": 6, "x": 12, "y": 16 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -907,7 +907,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "sum(increase(vigilantai_notifications_sent_total{environment=\"$environment\", instance=~\"$instance\"}[1h]))",
           "legendFormat": "Last Hour",
@@ -923,7 +923,7 @@
       "gridPos": { "h": 5, "w": 6, "x": 18, "y": 16 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -959,7 +959,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "vigilantai_active_connections{environment=\"$environment\", instance=~\"$instance\"}",
           "legendFormat": "{{instance}}",
@@ -983,7 +983,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 22 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1048,7 +1048,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "vigilantai_gateway_cameras_online{environment=\"$environment\", instance=~\"$instance\"}",
           "legendFormat": "Online",
@@ -1064,7 +1064,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 22 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1100,7 +1100,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "vigilantai:gateway_cameras_online:ratio{environment=\"$environment\", instance=~\"$instance\"} * 100",
           "legendFormat": "Availability",
@@ -1116,7 +1116,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 22 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1181,7 +1181,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "sum(rate(vigilantai_ai_inference_requests_total{environment=\"$environment\", instance=~\"$instance\"}[5m]))",
           "legendFormat": "Inferences/s",
@@ -1205,7 +1205,7 @@
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 31 },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1325,7 +1325,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "ds-prometheus"
           },
           "expr": "ALERTS{alertstate=\"firing\", environment=\"$environment\", instance=~\"$instance\"}",
           "legendFormat": "{{alertname}}",
@@ -1350,7 +1350,7 @@
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 19 },
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "ds-loki"
       },
       "targets": [
         {

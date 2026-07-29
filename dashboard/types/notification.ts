@@ -1,5 +1,5 @@
-export type NotificationChannel = "email" | "webhook" | "dashboard";
-export type NotificationStatus = "pending" | "sent" | "delivered" | "failed";
+export type NotificationChannel = "email" | "webhook";
+export type NotificationStatus = "pending" | "sent" | "failed" | "retrying";
 
 export interface Notification {
   id: string;

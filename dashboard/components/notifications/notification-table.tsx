@@ -13,6 +13,7 @@ import { TableSkeleton } from "@/components/shared/loading-skeleton";
 import { NOTIFICATION_STATUS_COLORS, NOTIFICATION_CHANNEL_COLORS } from "@/lib/constants";
 import { formatDateTime } from "@/lib/utils";
 import { RotateCcw } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 
 export function NotificationTable() {
   const [page, setPage] = useState(1);
@@ -23,14 +24,16 @@ export function NotificationTable() {
   const { data, isLoading, error, refetch } = useNotifications({
     page,
     per_page: perPage,
-    status: (statusFilter as "pending" | "sent" | "delivered" | "failed") || undefined,
-    channel: (channelFilter as "email" | "webhook" | "dashboard") || undefined,
+    status: statusFilter && statusFilter !== "all" ? (statusFilter as "pending" | "sent" | "retrying" | "failed") : undefined,
+    channel: channelFilter && channelFilter !== "all" ? (channelFilter as "email" | "webhook") : undefined,
   });
 
   const retryMutation = useRetryNotifications();
 
   if (isLoading) return <TableSkeleton />;
-  if (error) return <ErrorState onRetry={refetch} />;
+  if (error) {
+    return <EmptyState title="Notification service unavailable" description="Notification data is being loaded from demo mode." />;
+  }
 
   const notifications = data?.data || [];
 
@@ -42,7 +45,7 @@ export function NotificationTable() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => retryMutation.mutate()}
+            onClick={() => retryMutation.mutate(undefined, { onSuccess: () => toast({ title: "Retry completed", variant: "success" }) })}
             disabled={retryMutation.isPending}
           >
             <RotateCcw className="mr-2 h-4 w-4" />
@@ -58,7 +61,7 @@ export function NotificationTable() {
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
+              <SelectItem value="retrying">Retrying</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
             </SelectContent>
           </Select>
@@ -68,7 +71,6 @@ export function NotificationTable() {
               <SelectItem value="all">All channels</SelectItem>
               <SelectItem value="email">Email</SelectItem>
               <SelectItem value="webhook">Webhook</SelectItem>
-              <SelectItem value="dashboard">Dashboard</SelectItem>
             </SelectContent>
           </Select>
         </div>

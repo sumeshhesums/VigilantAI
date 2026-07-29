@@ -8,16 +8,17 @@ use crate::dto::auth::{
 use crate::errors::AppError;
 use crate::middleware::auth::AuthUser;
 use crate::repository::user_repository::PostgresUserRepository;
+use crate::repository::UserRepository;
 use crate::services::AuthService;
 use crate::state::AppState;
 
-fn user_response(user: crate::models::User) -> UserResponse {
+fn user_response(user: crate::models::User, role: String) -> UserResponse {
     UserResponse {
         id: user.id,
         email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
-        role: "user".to_string(),
+        role,
         created_at: user.created_at,
     }
 }
@@ -46,7 +47,7 @@ pub async fn register(
             }
         })?;
 
-    Ok((StatusCode::CREATED, Json(user_response(user))))
+    Ok((StatusCode::CREATED, Json(user_response(user, "user".to_string()))))
 }
 
 pub async fn login(
@@ -111,6 +112,15 @@ pub async fn logout(
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn me(AuthUser { user, .. }: AuthUser) -> Json<UserResponse> {
-    Json(user_response(user))
+pub async fn me(
+    State(state): State<AppState>,
+    AuthUser { user, .. }: AuthUser,
+) -> Json<UserResponse> {
+    let repo = PostgresUserRepository;
+    let roles = repo
+        .find_roles_by_user_id(&state.postgres_pool, user.id)
+        .await
+        .unwrap_or_default();
+    let role = roles.first().cloned().unwrap_or_else(|| "user".to_string());
+    Json(user_response(user, role))
 }

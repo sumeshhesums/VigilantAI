@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -20,6 +21,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const PUBLIC_ROUTES = ["/login"];
 
+function AuthSpinner() {
+  return (
+    <div className="flex h-screen w-screen items-center justify-center bg-background">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -30,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
   const router = useRouter();
   const pathname = usePathname();
+  const mountedRef = useRef(false);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -53,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setState((s) => ({ ...s, isLoading: false }));
     }
+    mountedRef.current = true;
   }, []);
 
   useEffect(() => {
@@ -61,18 +72,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isPublic = PUBLIC_ROUTES.includes(pathname);
 
     if (!state.isAuthenticated && !isPublic) {
-      router.push("/login");
+      router.replace("/login");
     } else if (state.isAuthenticated && pathname === "/login") {
-      router.push("/");
+      router.replace("/");
     }
   }, [state.isAuthenticated, state.isLoading, pathname, router]);
 
   const login = useCallback(async (email: string, password: string) => {
     const authResponse = await authService.login({ email, password });
-    const user = await authService.getMe();
 
     localStorage.setItem("access_token", authResponse.access_token);
     localStorage.setItem("refresh_token", authResponse.refresh_token);
+
+    const user = await authService.getMe();
     localStorage.setItem("user", JSON.stringify(user));
 
     setState({
@@ -104,12 +116,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
-  if (state.isLoading) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
+  if (state.isLoading || !mountedRef.current) {
+    return <AuthSpinner />;
+  }
+
+  const isPublic = PUBLIC_ROUTES.includes(pathname);
+
+  if (!state.isAuthenticated && !isPublic) {
+    return <AuthSpinner />;
+  }
+
+  if (state.isAuthenticated && pathname === "/login") {
+    return <AuthSpinner />;
   }
 
   return (

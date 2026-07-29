@@ -11,6 +11,7 @@ import { formatDateTime } from "@/lib/utils";
 import { useState } from "react";
 import type { IncidentStatus } from "@/types";
 import { Skeleton } from "@/components/shared/loading-skeleton";
+import { toast } from "@/components/ui/toast";
 
 interface IncidentDetailDrawerProps {
   incidentId: string | null;
@@ -27,7 +28,7 @@ export function IncidentDetailDrawer({ incidentId, open, onOpenChange }: Inciden
     if (incidentId && newStatus) {
       updateMutation.mutate(
         { id: incidentId, data: { status: newStatus as IncidentStatus } },
-        { onSuccess: () => setNewStatus("") }
+        { onSuccess: () => { toast({ title: "Incident status updated", variant: "success" }); setNewStatus(""); } }
       );
     }
   };

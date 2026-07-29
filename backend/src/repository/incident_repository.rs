@@ -38,7 +38,8 @@ impl IncidentRepository for PostgresIncidentRepository {
     async fn create(&self, pool: &PgPool, incident: &CreateIncident) -> anyhow::Result<Incident> {
         let record = sqlx::query_as::<_, Incident>(
             "INSERT INTO incidents (camera_id, timestamp, severity, event_type, confidence, bounding_box, metadata) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+             VALUES ($1, $2, $3::incident_severity, $4, $5, $6, $7) \
+             RETURNING id, camera_id, timestamp, severity::text, status::text, event_type, confidence::float8, bounding_box, metadata, created_at, updated_at",
         )
         .bind(incident.camera_id)
         .bind(incident.timestamp)
@@ -54,7 +55,7 @@ impl IncidentRepository for PostgresIncidentRepository {
     }
 
     async fn find_by_id(&self, pool: &PgPool, id: uuid::Uuid) -> anyhow::Result<Option<Incident>> {
-        let record = sqlx::query_as::<_, Incident>("SELECT * FROM incidents WHERE id = $1")
+        let record = sqlx::query_as::<_, Incident>("SELECT id, camera_id, timestamp, severity::text, status::text, event_type, confidence::float8, bounding_box, metadata, created_at, updated_at FROM incidents WHERE id = $1")
             .bind(id)
             .fetch_optional(pool)
             .await?;
@@ -69,7 +70,7 @@ impl IncidentRepository for PostgresIncidentRepository {
         offset: i64,
         limit: i64,
     ) -> anyhow::Result<Vec<Incident>> {
-        let mut query = String::from("SELECT * FROM incidents WHERE 1=1");
+        let mut query = String::from("SELECT id, camera_id, timestamp, severity::text, status::text, event_type, confidence::float8, bounding_box, metadata, created_at, updated_at FROM incidents WHERE 1=1");
         let mut bind_idx: u32 = 0;
 
         if params.camera_id.is_some() {
@@ -78,11 +79,11 @@ impl IncidentRepository for PostgresIncidentRepository {
         }
         if params.severity.is_some() {
             bind_idx += 1;
-            query.push_str(&format!(" AND severity = ${}", bind_idx));
+            query.push_str(&format!(" AND severity = ${}::incident_severity", bind_idx));
         }
         if params.status.is_some() {
             bind_idx += 1;
-            query.push_str(&format!(" AND status = ${}", bind_idx));
+            query.push_str(&format!(" AND status = ${}::incident_status", bind_idx));
         }
         if params.event_type.is_some() {
             bind_idx += 1;
@@ -141,11 +142,11 @@ impl IncidentRepository for PostgresIncidentRepository {
         }
         if params.severity.is_some() {
             bind_idx += 1;
-            query.push_str(&format!(" AND severity = ${}", bind_idx));
+            query.push_str(&format!(" AND severity = ${}::incident_severity", bind_idx));
         }
         if params.status.is_some() {
             bind_idx += 1;
-            query.push_str(&format!(" AND status = ${}", bind_idx));
+            query.push_str(&format!(" AND status = ${}::incident_status", bind_idx));
         }
         if params.event_type.is_some() {
             bind_idx += 1;
@@ -192,7 +193,8 @@ impl IncidentRepository for PostgresIncidentRepository {
         update: &UpdateIncidentStatus,
     ) -> anyhow::Result<Option<Incident>> {
         let record = sqlx::query_as::<_, Incident>(
-            "UPDATE incidents SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING *",
+            "UPDATE incidents SET status = $2::incident_status, updated_at = NOW() WHERE id = $1 \
+             RETURNING id, camera_id, timestamp, severity::text, status::text, event_type, confidence::float8, bounding_box, metadata, created_at, updated_at",
         )
         .bind(id)
         .bind(update.status.as_db_str())
@@ -210,7 +212,7 @@ impl IncidentRepository for PostgresIncidentRepository {
         since: chrono::DateTime<chrono::Utc>,
     ) -> anyhow::Result<Vec<Incident>> {
         let records = sqlx::query_as::<_, Incident>(
-            "SELECT * FROM incidents \
+            "SELECT id, camera_id, timestamp, severity::text, status::text, event_type, confidence::float8, bounding_box, metadata, created_at, updated_at FROM incidents \
              WHERE camera_id = $1 AND event_type = $2 AND timestamp >= $3 \
              ORDER BY timestamp DESC",
         )

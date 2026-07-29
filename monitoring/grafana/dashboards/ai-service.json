@@ -30,7 +30,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -77,7 +77,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "rate(vigilantai_ai_inference_requests_total{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}[5m])",
           "legendFormat": "Inferences/s",
           "refId": "A"
@@ -85,7 +85,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "fixedColor": "red", "mode": "fixed" },
@@ -132,7 +132,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "rate(vigilantai_ai_inference_failures_total{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}[5m])",
           "legendFormat": "Failures/s",
           "refId": "A"
@@ -140,7 +140,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -173,7 +173,7 @@
       "type": "gauge",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "vigilantai:ai_failure_rate:ratio5m{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"} * 100",
           "legendFormat": "Failure Rate",
           "refId": "A"
@@ -181,7 +181,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -214,7 +214,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "sum(vigilantai_ai_inference_requests_total{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"})",
           "legendFormat": "Total",
           "refId": "A"
@@ -229,7 +229,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -276,19 +276,19 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "histogram_quantile(0.50, sum(rate(vigilantai_ai_inference_latency_seconds_bucket{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}[5m])) by (le))",
           "legendFormat": "P50",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "histogram_quantile(0.95, sum(rate(vigilantai_ai_inference_latency_seconds_bucket{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}[5m])) by (le))",
           "legendFormat": "P95",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "histogram_quantile(0.99, sum(rate(vigilantai_ai_inference_latency_seconds_bucket{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}[5m])) by (le))",
           "legendFormat": "P99",
           "refId": "C"
@@ -296,7 +296,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "scheme", "schemeOrName": "Blues" },
@@ -342,7 +342,7 @@
       "type": "histogram",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "sum(rate(vigilantai_ai_inference_latency_seconds_bucket{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}[5m])) by (le)",
           "legendFormat": "{{le}}",
           "refId": "A",
@@ -351,7 +351,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -384,7 +384,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "vigilantai_ai_model_load_time_seconds{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}",
           "legendFormat": "Load Time",
           "refId": "A"
@@ -399,7 +399,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -446,7 +446,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "rate(vigilantai_ai_images_processed_total{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}[5m])",
           "legendFormat": "Images/s",
           "refId": "A"
@@ -454,7 +454,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -501,7 +501,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "rate(vigilantai_ai_detections_total{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}[5m])",
           "legendFormat": "Detections/s",
           "refId": "A"
@@ -509,7 +509,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "scheme", "schemeOrName": "Oranges" },
@@ -555,7 +555,7 @@
       "type": "histogram",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "sum(vigilantai_ai_detection_confidence_bucket{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}) by (le)",
           "legendFormat": "{{le}}",
           "refId": "A",
@@ -564,7 +564,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -611,7 +611,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "rate(vigilantai_ai_detections_total{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}[5m]) / rate(vigilantai_ai_images_processed_total{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}[5m])",
           "legendFormat": "Avg Detections/Image",
           "refId": "A"
@@ -626,7 +626,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -675,7 +675,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "vigilantai_ai_cpu_usage_percent{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}",
           "legendFormat": "CPU Usage",
           "refId": "A"
@@ -683,7 +683,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -732,7 +732,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "ds-prometheus" },
           "expr": "vigilantai_ai_memory_usage_bytes{job=\"vigilantai-ai-service\", environment=\"$environment\", instance=\"$instance\"}",
           "legendFormat": "Memory Usage",
           "refId": "A"
@@ -754,7 +754,7 @@
       "gridPos": { "h": 8, "w": 16, "x": 0, "y": 14 },
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "ds-loki"
       },
       "targets": [
         {
@@ -777,7 +777,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 14 },
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "ds-loki"
       },
       "targets": [
         {

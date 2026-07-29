@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useCreateCamera, useUpdateCamera, useCamera } from "@/hooks/use-cameras";
+import { toast } from "@/components/ui/toast";
 
 interface CameraFormProps {
   cameraId?: string;
@@ -40,10 +41,10 @@ export function CameraForm({ cameraId, onSuccess, onCancel }: CameraFormProps) {
     if (isEditing && cameraId) {
       updateMutation.mutate(
         { id: cameraId, data: data as UpdateCameraFormData },
-        { onSuccess }
+        { onSuccess: () => { toast({ title: "Camera updated", variant: "success" }); onSuccess?.(); } }
       );
     } else {
-      createMutation.mutate(data, { onSuccess });
+      createMutation.mutate(data, { onSuccess: () => { toast({ title: "Camera created", variant: "success" }); onSuccess?.(); } });
     }
   };
 

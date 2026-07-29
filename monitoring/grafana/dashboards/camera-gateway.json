@@ -24,7 +24,7 @@
         "query": "label_values(up, environment)",
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "ds-prometheus"
         },
         "current": {},
         "refresh": 2,
@@ -42,7 +42,7 @@
         "query": "label_values(up{job=\"vigilantai-camera-gateway\", environment=\"$environment\"}, instance)",
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "ds-prometheus"
         },
         "current": {},
         "refresh": 2,
@@ -70,7 +70,7 @@
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 6, "w": 6, "x": 0, "y": 1 },
       "targets": [
@@ -110,7 +110,7 @@
       "type": "stat",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 6, "w": 6, "x": 6, "y": 1 },
       "targets": [
@@ -148,7 +148,7 @@
       "type": "stat",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 6, "w": 6, "x": 12, "y": 1 },
       "targets": [
@@ -187,7 +187,7 @@
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 6, "w": 6, "x": 18, "y": 1 },
       "targets": [
@@ -235,7 +235,7 @@
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 8, "w": 16, "x": 0, "y": 8 },
       "targets": [
@@ -317,7 +317,7 @@
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
       "targets": [
@@ -378,7 +378,7 @@
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 17 },
       "targets": [
@@ -431,7 +431,7 @@
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 17 },
       "targets": [
@@ -484,7 +484,7 @@
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 17 },
       "targets": [
@@ -545,7 +545,7 @@
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 26 },
       "targets": [
@@ -598,7 +598,7 @@
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 26 },
       "targets": [
@@ -651,7 +651,7 @@
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "ds-prometheus"
       },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 26 },
       "targets": [
@@ -700,7 +700,7 @@
       "gridPos": { "h": 8, "w": 16, "x": 0, "y": 13 },
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "ds-loki"
       },
       "targets": [
         {
@@ -723,7 +723,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 13 },
       "datasource": {
         "type": "loki",
-        "uid": "${DS_LOKI}"
+        "uid": "ds-loki"
       },
       "targets": [
         {

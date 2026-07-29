@@ -6,7 +6,7 @@ use crate::state::AppState;
 
 pub fn routes() -> Router<AppState> {
     Router::new().route(
-        "/{id}",
+        "/:id",
         get(evidence::get_evidence).delete(evidence::delete_evidence),
     )
 }
