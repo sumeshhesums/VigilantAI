@@ -11,31 +11,17 @@ class CreateCameraUseCase {
 
   Future<Either<Failure, Camera>> execute({
     required String name,
-    required String location,
-    String? streamUrl,
-    String? rtspUrl,
-    String? model,
-    String? ipAddress,
-    int? port,
-    String? password,
-    String? username,
+    String? location,
+    required String rtspUrl,
     int? fps,
-    int? resolutionWidth,
-    int? resolutionHeight,
+    String? resolution,
   }) {
     return _repository.createCamera(
       name: name,
       location: location,
-      streamUrl: streamUrl,
       rtspUrl: rtspUrl,
-      model: model,
-      ipAddress: ipAddress,
-      port: port,
-      password: password,
-      username: username,
       fps: fps,
-      resolutionWidth: resolutionWidth,
-      resolutionHeight: resolutionHeight,
+      resolution: resolution,
     );
   }
 }

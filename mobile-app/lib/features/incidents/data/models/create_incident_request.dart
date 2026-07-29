@@ -6,17 +6,23 @@ part 'create_incident_request.g.dart';
 class CreateIncidentRequest {
   @JsonKey(name: 'camera_id')
   final String cameraId;
-  final String title;
-  final String? description;
+  final String? timestamp;
   final String severity;
-  final String? status;
+  @JsonKey(name: 'event_type')
+  final String eventType;
+  final double confidence;
+  @JsonKey(name: 'bounding_box')
+  final Map<String, dynamic>? boundingBox;
+  final Map<String, dynamic>? metadata;
 
   const CreateIncidentRequest({
     required this.cameraId,
-    required this.title,
-    this.description,
+    this.timestamp,
     required this.severity,
-    this.status,
+    required this.eventType,
+    required this.confidence,
+    this.boundingBox,
+    this.metadata,
   });
 
   Map<String, dynamic> toJson() => _$CreateIncidentRequestToJson(this);

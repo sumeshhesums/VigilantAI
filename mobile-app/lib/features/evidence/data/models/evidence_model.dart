@@ -9,18 +9,13 @@ class EvidenceModel {
   final String incidentId;
   @JsonKey(name: 'file_name')
   final String fileName;
-  @JsonKey(name: 'file_type')
-  final String fileType;
+  @JsonKey(name: 'content_type')
+  final String contentType;
   @JsonKey(name: 'file_size')
   final int fileSize;
-  @JsonKey(name: 'file_url')
-  final String fileUrl;
-  @JsonKey(name: 'thumbnail_url')
-  final String? thumbnailUrl;
-  @JsonKey(name: 'uploaded_by')
-  final String uploadedBy;
-  @JsonKey(name: 'uploaded_at')
-  final String uploadedAt;
+  final String sha256;
+  final int? width;
+  final int? height;
   @JsonKey(name: 'created_at')
   final String createdAt;
 
@@ -28,12 +23,11 @@ class EvidenceModel {
     required this.id,
     required this.incidentId,
     required this.fileName,
-    required this.fileType,
+    required this.contentType,
     required this.fileSize,
-    required this.fileUrl,
-    this.thumbnailUrl,
-    required this.uploadedBy,
-    required this.uploadedAt,
+    required this.sha256,
+    this.width,
+    this.height,
     required this.createdAt,
   });
 

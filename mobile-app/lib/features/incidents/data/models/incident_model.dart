@@ -7,36 +7,32 @@ class IncidentModel {
   final String id;
   @JsonKey(name: 'camera_id')
   final String cameraId;
-  @JsonKey(name: 'camera_name')
-  final String cameraName;
-  final String title;
-  final String description;
+  final String timestamp;
   final String severity;
   final String status;
-  @JsonKey(name: 'detected_at')
-  final String detectedAt;
-  @JsonKey(name: 'acknowledged_at')
-  final String? acknowledgedAt;
-  @JsonKey(name: 'resolved_at')
-  final String? resolvedAt;
+  @JsonKey(name: 'event_type')
+  final String eventType;
+  final double confidence;
+  @JsonKey(name: 'bounding_box')
+  final Map<String, dynamic>? boundingBox;
+  final Map<String, dynamic>? metadata;
   @JsonKey(name: 'created_at')
   final String createdAt;
   @JsonKey(name: 'updated_at')
-  final String updatedAt;
+  final String? updatedAt;
 
   const IncidentModel({
     required this.id,
     required this.cameraId,
-    required this.cameraName,
-    required this.title,
-    required this.description,
+    required this.timestamp,
     required this.severity,
     required this.status,
-    required this.detectedAt,
-    this.acknowledgedAt,
-    this.resolvedAt,
+    required this.eventType,
+    required this.confidence,
+    this.boundingBox,
+    this.metadata,
     required this.createdAt,
-    required this.updatedAt,
+    this.updatedAt,
   });
 
   factory IncidentModel.fromJson(Map<String, dynamic> json) =>
@@ -50,14 +46,14 @@ class PaginatedIncidentsModel {
   final List<IncidentModel> incidents;
   final int total;
   final int page;
-  @JsonKey(name: 'page_size')
-  final int pageSize;
+  @JsonKey(name: 'per_page')
+  final int perPage;
 
   const PaginatedIncidentsModel({
     required this.incidents,
     required this.total,
     required this.page,
-    required this.pageSize,
+    required this.perPage,
   });
 
   factory PaginatedIncidentsModel.fromJson(Map<String, dynamic> json) =>

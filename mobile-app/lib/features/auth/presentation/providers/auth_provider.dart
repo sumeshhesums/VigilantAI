@@ -1,39 +1,40 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final authProvider = ChangeNotifierProvider<AuthNotifier>((ref) {
-  return AuthNotifier();
+import '../../../../di/providers.dart';
+import '../../domain/repositories/auth_repository.dart';
+
+enum AuthState { initial, loading, authenticated, unauthenticated, error }
+
+final authStateProvider =
+    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  final repo = ref.watch(authRepositoryProvider);
+  return AuthNotifier(repo);
 });
 
-enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
+class AuthNotifier extends StateNotifier<AuthState> {
+  final AuthRepository _repository;
 
-class AuthNotifier extends ChangeNotifier {
-  AuthStatus _status = AuthStatus.initial;
-  String? _errorMessage;
+  AuthNotifier(this._repository) : super(AuthState.initial);
 
-  AuthStatus get status => _status;
-  String? get errorMessage => _errorMessage;
-  bool get isLoading => _status == AuthStatus.loading;
-
-  void login(String email, String password) {
-    _status = AuthStatus.loading;
-    notifyListeners();
-
-    // TODO: implement actual login via use case
-    Future.delayed(const Duration(seconds: 2), () {
-      _status = AuthStatus.authenticated;
-      notifyListeners();
-    });
+  Future<void> login(String email, String password) async {
+    state = AuthState.loading;
+    final result = await _repository.login(email, password);
+    result.fold(
+      (failure) => state = AuthState.error,
+      (_) => state = AuthState.authenticated,
+    );
   }
 
-  void logout() {
-    _status = AuthStatus.unauthenticated;
-    _errorMessage = null;
-    notifyListeners();
+  Future<void> logout() async {
+    await _repository.logout();
+    state = AuthState.unauthenticated;
   }
 
-  void clearError() {
-    _errorMessage = null;
-    notifyListeners();
+  Future<void> checkAuth() async {
+    final result = await _repository.isAuthenticated();
+    result.fold(
+      (_) => state = AuthState.unauthenticated,
+      (isAuth) => state = isAuth ? AuthState.authenticated : AuthState.unauthenticated,
+    );
   }
 }

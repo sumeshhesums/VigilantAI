@@ -2,7 +2,7 @@ import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
 
 abstract class NotificationRemoteDataSource {
-  Future<Map<String, dynamic>> getNotifications({int page = 1, int pageSize = 20});
+  Future<Map<String, dynamic>> getNotifications({int page = 1, int perPage = 20});
   Future<void> markRead(String id);
   Future<void> markAllRead();
 }
@@ -13,10 +13,10 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
   NotificationRemoteDataSourceImpl(this._client);
 
   @override
-  Future<Map<String, dynamic>> getNotifications({int page = 1, int pageSize = 20}) async {
+  Future<Map<String, dynamic>> getNotifications({int page = 1, int perPage = 20}) async {
     final result = await _client.get<Map<String, dynamic>>(
       ApiConstants.notifications,
-      queryParameters: {'page': page, 'page_size': pageSize},
+      queryParameters: {'page': page, 'per_page': perPage},
     );
     return result.fold(
       (failure) => throw failure,
@@ -27,7 +27,7 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
   @override
   Future<void> markRead(String id) async {
     final result = await _client.put<void>(
-      '${ApiConstants.notificationsMarkRead}$id/read',
+      '${ApiConstants.notificationById}$id/read',
     );
     return result.fold(
       (failure) => throw failure,

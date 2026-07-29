@@ -10,8 +10,9 @@ class UserModel {
   final String firstName;
   @JsonKey(name: 'last_name')
   final String lastName;
-  final String role;
-  final bool enabled;
+  @JsonKey(name: 'is_active')
+  final bool isActive;
+  final List<String> roles;
   @JsonKey(name: 'created_at')
   final String createdAt;
   @JsonKey(name: 'updated_at')
@@ -22,8 +23,8 @@ class UserModel {
     required this.email,
     required this.firstName,
     required this.lastName,
-    required this.role,
-    required this.enabled,
+    required this.isActive,
+    required this.roles,
     required this.createdAt,
     this.updatedAt,
   });

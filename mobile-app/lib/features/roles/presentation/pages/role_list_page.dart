@@ -37,18 +37,9 @@ class RoleListPage extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       itemBuilder: (context, index) {
                         final item = notifier.roles[index];
-                        return RoleCard(
-                          role: item,
-                          onDelete: () => state.deleteRole(item.id),
-                        );
+                        return RoleCard(role: item);
                       },
                     ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: navigate to create role page
-        },
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }

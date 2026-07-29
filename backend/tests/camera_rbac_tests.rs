@@ -16,6 +16,7 @@ use backend::metrics::AppMetrics;
 use backend::security::jwt::create_access_token;
 use backend::security::Security;
 use backend::state::AppState;
+use backend::ws::WsState;
 
 fn test_jwt_config() -> JwtConfig {
     let private_key = std::fs::read_to_string(concat!(
@@ -101,6 +102,7 @@ async fn setup() -> (PgPool, AppState) {
         redis_client,
         security,
         metrics: AppMetrics::new(),
+        ws_state: WsState::new(),
     };
 
     (pool, state)

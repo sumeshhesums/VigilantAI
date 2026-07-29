@@ -14,8 +14,8 @@ class EvidenceCard extends StatelessWidget {
     this.onTap,
   });
 
-  IconData _fileIcon(String fileType) {
-    switch (fileType.toLowerCase()) {
+  IconData _fileIcon(String contentType) {
+    switch (contentType.toLowerCase()) {
       case 'image/jpeg':
       case 'image/png':
       case 'image/gif':
@@ -41,16 +41,7 @@ class EvidenceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (evidence.thumbnailUrl != null)
-              Image.network(
-                evidence.thumbnailUrl!,
-                height: 120,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _filePlaceholder(),
-              )
-            else
-              _filePlaceholder(),
+            _filePlaceholder(),
             Padding(
               padding: const EdgeInsets.all(8),
               child: Column(
@@ -91,7 +82,7 @@ class EvidenceCard extends StatelessWidget {
       color: Colors.grey.shade200,
       child: Center(
         child: Icon(
-          _fileIcon(evidence.fileType),
+          _fileIcon(evidence.contentType),
           size: 48,
           color: Colors.grey.shade400,
         ),

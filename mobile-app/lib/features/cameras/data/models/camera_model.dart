@@ -8,23 +8,15 @@ part 'camera_model.g.dart';
 class CameraModel {
   final String id;
   final String name;
-  final String location;
+  final String? location;
   final String status;
   final bool enabled;
-  @JsonKey(name: 'stream_url')
-  final String? streamUrl;
   @JsonKey(name: 'rtsp_url')
-  final String? rtspUrl;
-  final String? model;
-  @JsonKey(name: 'ip_address')
-  final String? ipAddress;
-  final int? port;
-  final String? username;
+  final String rtspUrl;
   final int? fps;
-  @JsonKey(name: 'resolution_width')
-  final int? resolutionWidth;
-  @JsonKey(name: 'resolution_height')
-  final int? resolutionHeight;
+  final String? resolution;
+  @JsonKey(name: 'last_seen')
+  final String? lastSeen;
   @JsonKey(name: 'created_at')
   final String createdAt;
   @JsonKey(name: 'updated_at')
@@ -33,18 +25,13 @@ class CameraModel {
   const CameraModel({
     required this.id,
     required this.name,
-    required this.location,
+    this.location,
     required this.status,
     required this.enabled,
-    this.streamUrl,
-    this.rtspUrl,
-    this.model,
-    this.ipAddress,
-    this.port,
-    this.username,
+    required this.rtspUrl,
     this.fps,
-    this.resolutionWidth,
-    this.resolutionHeight,
+    this.resolution,
+    this.lastSeen,
     required this.createdAt,
     this.updatedAt,
   });
@@ -60,15 +47,10 @@ class CameraModel {
         location: location,
         status: status,
         enabled: enabled,
-        streamUrl: streamUrl,
         rtspUrl: rtspUrl,
-        model: model,
-        ipAddress: ipAddress,
-        port: port,
-        username: username,
         fps: fps,
-        resolutionWidth: resolutionWidth,
-        resolutionHeight: resolutionHeight,
+        resolution: resolution,
+        lastSeen: lastSeen != null ? DateTime.parse(lastSeen!) : null,
         createdAt: DateTime.parse(createdAt),
         updatedAt: updatedAt != null ? DateTime.parse(updatedAt!) : null,
       );

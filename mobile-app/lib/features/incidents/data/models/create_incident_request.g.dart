@@ -10,18 +10,22 @@ CreateIncidentRequest _$CreateIncidentRequestFromJson(
         Map<String, dynamic> json) =>
     CreateIncidentRequest(
       cameraId: json['camera_id'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String?,
+      timestamp: json['timestamp'] as String?,
       severity: json['severity'] as String,
-      status: json['status'] as String?,
+      eventType: json['event_type'] as String,
+      confidence: (json['confidence'] as num).toDouble(),
+      boundingBox: json['bounding_box'] as Map<String, dynamic>?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$CreateIncidentRequestToJson(
         CreateIncidentRequest instance) =>
     <String, dynamic>{
       'camera_id': instance.cameraId,
-      'title': instance.title,
-      'description': instance.description,
+      'timestamp': instance.timestamp,
       'severity': instance.severity,
-      'status': instance.status,
+      'event_type': instance.eventType,
+      'confidence': instance.confidence,
+      'bounding_box': instance.boundingBox,
+      'metadata': instance.metadata,
     };

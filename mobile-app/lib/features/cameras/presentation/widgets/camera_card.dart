@@ -23,7 +23,7 @@ class CameraCard extends StatelessWidget {
           camera.name,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(camera.location),
+        subtitle: Text(camera.location ?? ''),
         trailing: CameraStatusBadge(status: camera.status),
       ),
     );

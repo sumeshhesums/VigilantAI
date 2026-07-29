@@ -1,51 +1,46 @@
-class CameraInfo {
-  final String cameraId;
-  final String cameraName;
-
-  const CameraInfo({
-    required this.cameraId,
-    required this.cameraName,
-  });
-}
-
 class Incident {
   final String id;
-  final CameraInfo cameraInfo;
-  final String title;
-  final String description;
+  final String cameraId;
+  final DateTime timestamp;
   final String severity;
   final String status;
-  final DateTime detectedAt;
-  final DateTime? acknowledgedAt;
-  final DateTime? resolvedAt;
+  final String eventType;
+  final double confidence;
+  final Map<String, dynamic>? boundingBox;
+  final Map<String, dynamic>? metadata;
   final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
 
   const Incident({
     required this.id,
-    required this.cameraInfo,
-    required this.title,
-    required this.description,
+    required this.cameraId,
+    required this.timestamp,
     required this.severity,
     required this.status,
-    required this.detectedAt,
-    this.acknowledgedAt,
-    this.resolvedAt,
+    required this.eventType,
+    required this.confidence,
+    this.boundingBox,
+    this.metadata,
     required this.createdAt,
-    required this.updatedAt,
+    this.updatedAt,
   });
+
+  bool get isOpen => status == 'open';
+  bool get isAcknowledged => status == 'acknowledged';
+  bool get isResolved => status == 'resolved';
+  bool get isFalsePositive => status == 'false_positive';
 }
 
 class PaginatedIncidents {
   final List<Incident> incidents;
   final int total;
   final int page;
-  final int pageSize;
+  final int perPage;
 
   const PaginatedIncidents({
     required this.incidents,
     required this.total,
     required this.page,
-    required this.pageSize,
+    required this.perPage,
   });
 }

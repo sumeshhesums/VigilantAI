@@ -9,8 +9,8 @@ pub mod metrics;
 pub mod notification;
 pub mod roles;
 pub mod user;
-
 use crate::state::AppState;
+use crate::ws;
 use axum::Router;
 
 pub fn routes() -> Router<AppState> {
@@ -26,4 +26,5 @@ pub fn routes() -> Router<AppState> {
         .nest("/api/v1/dashboard", dashboard::routes())
         .route("/api/v1/health", axum::routing::get(health::health))
         .route("/metrics", axum::routing::get(metrics::metrics))
+        .merge(ws::websocket_routes())
 }

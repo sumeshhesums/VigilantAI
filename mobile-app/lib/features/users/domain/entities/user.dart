@@ -3,8 +3,8 @@ class User {
   final String email;
   final String firstName;
   final String lastName;
-  final String role;
-  final bool enabled;
+  final List<String> roles;
+  final bool isActive;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -13,8 +13,8 @@ class User {
     required this.email,
     required this.firstName,
     required this.lastName,
-    required this.role,
-    required this.enabled,
+    required this.roles,
+    required this.isActive,
     required this.createdAt,
     this.updatedAt,
   });

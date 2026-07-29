@@ -4,6 +4,7 @@ use sqlx::postgres::PgPool;
 use crate::config::AppConfig;
 use crate::metrics::AppMetrics;
 use crate::security::Security;
+use crate::ws::WsState;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -12,4 +13,5 @@ pub struct AppState {
     pub redis_client: Client,
     pub security: Security,
     pub metrics: AppMetrics,
+    pub ws_state: WsState,
 }

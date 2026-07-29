@@ -12,9 +12,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
   NotificationRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<Either<Failure, List<Notification>>> getNotifications({int page = 1, int pageSize = 20}) async {
+  Future<Either<Failure, List<Notification>>> getNotifications({int page = 1, int perPage = 20}) async {
     try {
-      final response = await _remoteDataSource.getNotifications(page: page, pageSize: pageSize);
+      final response = await _remoteDataSource.getNotifications(page: page, perPage: perPage);
       final list = (response['notifications'] as List)
           .map((e) => _mapToEntity(NotificationModel.fromJson(e as Map<String, dynamic>)))
           .toList();
@@ -53,12 +53,15 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Notification _mapToEntity(NotificationModel model) {
     return Notification(
       id: model.id,
-      title: model.title,
-      message: model.message,
-      type: model.type,
-      read: model.read,
       incidentId: model.incidentId,
+      channel: model.channel,
+      recipient: model.recipient,
+      status: model.status,
+      attempts: model.attempts,
+      responseCode: model.responseCode,
+      errorMessage: model.errorMessage,
       createdAt: DateTime.parse(model.createdAt),
+      sentAt: model.sentAt != null ? DateTime.parse(model.sentAt!) : null,
     );
   }
 }

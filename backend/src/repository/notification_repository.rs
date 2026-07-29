@@ -42,6 +42,12 @@ pub trait NotificationRepository: Send + Sync {
         pool: &PgPool,
         max_attempts: i32,
     ) -> anyhow::Result<Vec<Notification>>;
+    async fn mark_as_read(
+        &self,
+        pool: &PgPool,
+        id: uuid::Uuid,
+    ) -> anyhow::Result<Option<Notification>>;
+    async fn mark_all_as_read(&self, pool: &PgPool) -> anyhow::Result<u64>;
 }
 
 pub struct PostgresNotificationRepository;
@@ -56,7 +62,7 @@ impl NotificationRepository for PostgresNotificationRepository {
         let record = sqlx::query_as::<_, Notification>(
             "INSERT INTO notifications (incident_id, channel, recipient) \
              VALUES ($1, $2::notification_channel, $3) \
-             RETURNING id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at",
+             RETURNING id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at, is_read, read_at",
         )
         .bind(notification.incident_id)
         .bind(notification.channel.as_db_str())
@@ -72,7 +78,7 @@ impl NotificationRepository for PostgresNotificationRepository {
         pool: &PgPool,
         id: uuid::Uuid,
     ) -> anyhow::Result<Option<Notification>> {
-        let record = sqlx::query_as::<_, Notification>("SELECT id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at FROM notifications WHERE id = $1")
+        let record = sqlx::query_as::<_, Notification>("SELECT id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at, is_read, read_at FROM notifications WHERE id = $1")
             .bind(id)
             .fetch_optional(pool)
             .await?;
@@ -87,7 +93,7 @@ impl NotificationRepository for PostgresNotificationRepository {
         limit: i64,
     ) -> anyhow::Result<Vec<Notification>> {
         let records = sqlx::query_as::<_, Notification>(
-            "SELECT id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at FROM notifications \
+            "SELECT id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at, is_read, read_at FROM notifications \
              WHERE ($1::notification_status IS NULL OR status = $1::notification_status) \
              AND ($2::notification_channel IS NULL OR channel = $2::notification_channel) \
              AND ($3::uuid IS NULL OR incident_id = $3) \
@@ -144,7 +150,7 @@ impl NotificationRepository for PostgresNotificationRepository {
             "UPDATE notifications \
              SET status = $2::notification_status, attempts = $3, response_code = $4, error_message = $5, sent_at = $6 \
              WHERE id = $1 \
-             RETURNING id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at",
+             RETURNING id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at, is_read, read_at",
         )
         .bind(id)
         .bind(status)
@@ -164,7 +170,7 @@ impl NotificationRepository for PostgresNotificationRepository {
         max_attempts: i32,
     ) -> anyhow::Result<Vec<Notification>> {
         let records = sqlx::query_as::<_, Notification>(
-            "SELECT id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at FROM notifications \
+            "SELECT id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at, is_read, read_at FROM notifications \
              WHERE (status = 'pending' OR status = 'retrying') \
              AND attempts < $1 \
              ORDER BY created_at ASC",
@@ -174,6 +180,34 @@ impl NotificationRepository for PostgresNotificationRepository {
         .await?;
 
         Ok(records)
+    }
+
+    async fn mark_as_read(
+        &self,
+        pool: &PgPool,
+        id: uuid::Uuid,
+    ) -> anyhow::Result<Option<Notification>> {
+        let record = sqlx::query_as::<_, Notification>(
+            "UPDATE notifications \
+             SET is_read = TRUE, read_at = NOW() \
+             WHERE id = $1 \
+             RETURNING id, incident_id, channel::text, recipient, status::text, attempts, response_code, error_message, created_at, sent_at, is_read, read_at",
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(record)
+    }
+
+    async fn mark_all_as_read(&self, pool: &PgPool) -> anyhow::Result<u64> {
+        let result = sqlx::query(
+            "UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE is_read = FALSE",
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(result.rows_affected())
     }
 }
 

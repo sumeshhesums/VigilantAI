@@ -10,14 +10,14 @@ class CreateUserRequest {
   final String firstName;
   @JsonKey(name: 'last_name')
   final String lastName;
-  final String role;
+  final List<String> roles;
 
   const CreateUserRequest({
     required this.email,
     required this.password,
     required this.firstName,
     required this.lastName,
-    required this.role,
+    required this.roles,
   });
 
   Map<String, dynamic> toJson() => _$CreateUserRequestToJson(this);

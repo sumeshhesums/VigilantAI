@@ -14,9 +14,9 @@ class UserRepositoryImpl implements UserRepository {
   UserRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<Either<Failure, List<User>>> getUsers({int page = 1, int pageSize = 20}) async {
+  Future<Either<Failure, List<User>>> getUsers({int page = 1, int perPage = 20}) async {
     try {
-      final response = await _remoteDataSource.getUsers(page: page, pageSize: pageSize);
+      final response = await _remoteDataSource.getUsers(page: page, perPage: perPage);
       final list = (response['users'] as List)
           .map((e) => _mapToEntity(UserModel.fromJson(e as Map<String, dynamic>)))
           .toList();
@@ -46,7 +46,7 @@ class UserRepositoryImpl implements UserRepository {
     required String password,
     required String firstName,
     required String lastName,
-    required String role,
+    required List<String> roles,
   }) async {
     try {
       final request = CreateUserRequest(
@@ -54,7 +54,7 @@ class UserRepositoryImpl implements UserRepository {
         password: password,
         firstName: firstName,
         lastName: lastName,
-        role: role,
+        roles: roles,
       );
       final model = await _remoteDataSource.createUser(request);
       return Right(_mapToEntity(model));
@@ -71,16 +71,12 @@ class UserRepositoryImpl implements UserRepository {
     String? email,
     String? firstName,
     String? lastName,
-    String? role,
-    bool? enabled,
   }) async {
     try {
       final request = UpdateUserRequest(
         email: email,
         firstName: firstName,
         lastName: lastName,
-        role: role,
-        enabled: enabled,
       );
       final model = await _remoteDataSource.updateUser(id, request);
       return Right(_mapToEntity(model));
@@ -109,8 +105,8 @@ class UserRepositoryImpl implements UserRepository {
       email: model.email,
       firstName: model.firstName,
       lastName: model.lastName,
-      role: model.role,
-      enabled: model.enabled,
+      roles: model.roles,
+      isActive: model.isActive,
       createdAt: DateTime.parse(model.createdAt),
       updatedAt: model.updatedAt != null ? DateTime.parse(model.updatedAt!) : null,
     );

@@ -104,6 +104,7 @@ mod tests {
             redis_client,
             security,
             metrics: crate::metrics::AppMetrics::new(),
+            ws_state: crate::ws::WsState::new(),
         }
     }
 

@@ -15,12 +15,12 @@ class CameraRepositoryImpl implements CameraRepository {
   @override
   Future<Either<Failure, List<Camera>>> getCameras({
     int page = 1,
-    int pageSize = 20,
+    int perPage = 20,
   }) async {
     try {
       final response = await _remoteDataSource.getCameras(
         page: page,
-        pageSize: pageSize,
+        perPage: perPage,
       );
       return Right(response.cameras.map((m) => m.toEntity()).toList());
     } on Failure catch (f) {
@@ -45,32 +45,18 @@ class CameraRepositoryImpl implements CameraRepository {
   @override
   Future<Either<Failure, Camera>> createCamera({
     required String name,
-    required String location,
-    String? streamUrl,
-    String? rtspUrl,
-    String? model,
-    String? ipAddress,
-    int? port,
-    String? password,
-    String? username,
+    String? location,
+    required String rtspUrl,
     int? fps,
-    int? resolutionWidth,
-    int? resolutionHeight,
+    String? resolution,
   }) async {
     try {
       final request = CreateCameraRequest(
         name: name,
         location: location,
-        streamUrl: streamUrl,
         rtspUrl: rtspUrl,
-        model: model,
-        ipAddress: ipAddress,
-        port: port,
-        password: password,
-        username: username,
         fps: fps,
-        resolutionWidth: resolutionWidth,
-        resolutionHeight: resolutionHeight,
+        resolution: resolution,
       );
       final response = await _remoteDataSource.createCamera(request);
       return Right(response.toEntity());
@@ -86,33 +72,19 @@ class CameraRepositoryImpl implements CameraRepository {
     String id, {
     String? name,
     String? location,
-    bool? enabled,
-    String? streamUrl,
     String? rtspUrl,
-    String? model,
-    String? ipAddress,
-    int? port,
-    String? password,
-    String? username,
     int? fps,
-    int? resolutionWidth,
-    int? resolutionHeight,
+    String? resolution,
+    bool? enabled,
   }) async {
     try {
       final request = UpdateCameraRequest(
         name: name,
         location: location,
-        enabled: enabled,
-        streamUrl: streamUrl,
         rtspUrl: rtspUrl,
-        model: model,
-        ipAddress: ipAddress,
-        port: port,
-        password: password,
-        username: username,
         fps: fps,
-        resolutionWidth: resolutionWidth,
-        resolutionHeight: resolutionHeight,
+        resolution: resolution,
+        enabled: enabled,
       );
       final response = await _remoteDataSource.updateCamera(id, request);
       return Right(response.toEntity());

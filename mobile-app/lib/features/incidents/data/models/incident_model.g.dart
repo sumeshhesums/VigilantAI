@@ -10,30 +10,28 @@ IncidentModel _$IncidentModelFromJson(Map<String, dynamic> json) =>
     IncidentModel(
       id: json['id'] as String,
       cameraId: json['camera_id'] as String,
-      cameraName: json['camera_name'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String,
+      timestamp: json['timestamp'] as String,
       severity: json['severity'] as String,
       status: json['status'] as String,
-      detectedAt: json['detected_at'] as String,
-      acknowledgedAt: json['acknowledged_at'] as String?,
-      resolvedAt: json['resolved_at'] as String?,
+      eventType: json['event_type'] as String,
+      confidence: (json['confidence'] as num).toDouble(),
+      boundingBox: json['bounding_box'] as Map<String, dynamic>?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
       createdAt: json['created_at'] as String,
-      updatedAt: json['updated_at'] as String,
+      updatedAt: json['updated_at'] as String?,
     );
 
 Map<String, dynamic> _$IncidentModelToJson(IncidentModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'camera_id': instance.cameraId,
-      'camera_name': instance.cameraName,
-      'title': instance.title,
-      'description': instance.description,
+      'timestamp': instance.timestamp,
       'severity': instance.severity,
       'status': instance.status,
-      'detected_at': instance.detectedAt,
-      'acknowledged_at': instance.acknowledgedAt,
-      'resolved_at': instance.resolvedAt,
+      'event_type': instance.eventType,
+      'confidence': instance.confidence,
+      'bounding_box': instance.boundingBox,
+      'metadata': instance.metadata,
       'created_at': instance.createdAt,
       'updated_at': instance.updatedAt,
     };
@@ -46,7 +44,7 @@ PaginatedIncidentsModel _$PaginatedIncidentsModelFromJson(
           .toList(),
       total: (json['total'] as num).toInt(),
       page: (json['page'] as num).toInt(),
-      pageSize: (json['page_size'] as num).toInt(),
+      perPage: (json['per_page'] as num).toInt(),
     );
 
 Map<String, dynamic> _$PaginatedIncidentsModelToJson(
@@ -55,5 +53,5 @@ Map<String, dynamic> _$PaginatedIncidentsModelToJson(
       'incidents': instance.incidents,
       'total': instance.total,
       'page': instance.page,
-      'page_size': instance.pageSize,
+      'per_page': instance.perPage,
     };

@@ -5,7 +5,7 @@ import '../models/update_user_request.dart';
 import '../models/user_model.dart';
 
 abstract class UserRemoteDataSource {
-  Future<Map<String, dynamic>> getUsers({int page = 1, int pageSize = 20});
+  Future<Map<String, dynamic>> getUsers({int page = 1, int perPage = 20});
   Future<UserModel> getUserById(String id);
   Future<UserModel> createUser(CreateUserRequest request);
   Future<UserModel> updateUser(String id, UpdateUserRequest request);
@@ -18,10 +18,10 @@ class UserRemoteDataSourceImpl implements UserRemoteDataSource {
   UserRemoteDataSourceImpl(this._client);
 
   @override
-  Future<Map<String, dynamic>> getUsers({int page = 1, int pageSize = 20}) async {
+  Future<Map<String, dynamic>> getUsers({int page = 1, int perPage = 20}) async {
     final result = await _client.get<Map<String, dynamic>>(
       ApiConstants.users,
-      queryParameters: {'page': page, 'page_size': pageSize},
+      queryParameters: {'page': page, 'per_page': perPage},
     );
     return result.fold(
       (failure) => throw failure,
@@ -54,7 +54,7 @@ class UserRemoteDataSourceImpl implements UserRemoteDataSource {
 
   @override
   Future<UserModel> updateUser(String id, UpdateUserRequest request) async {
-    final result = await _client.put<Map<String, dynamic>>(
+    final result = await _client.patch<Map<String, dynamic>>(
       '${ApiConstants.userById}$id',
       data: request.toJson(),
     );

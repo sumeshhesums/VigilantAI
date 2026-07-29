@@ -2,24 +2,22 @@ class Evidence {
   final String id;
   final String incidentId;
   final String fileName;
-  final String fileType;
+  final String contentType;
   final int fileSize;
-  final String fileUrl;
-  final String? thumbnailUrl;
-  final String uploadedBy;
-  final DateTime uploadedAt;
+  final String sha256;
+  final int? width;
+  final int? height;
   final DateTime createdAt;
 
   const Evidence({
     required this.id,
     required this.incidentId,
     required this.fileName,
-    required this.fileType,
+    required this.contentType,
     required this.fileSize,
-    required this.fileUrl,
-    this.thumbnailUrl,
-    required this.uploadedBy,
-    required this.uploadedAt,
+    required this.sha256,
+    this.width,
+    this.height,
     required this.createdAt,
   });
 

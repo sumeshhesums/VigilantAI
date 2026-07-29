@@ -15,19 +15,20 @@ final evidenceRemoteDataSourceProvider = Provider<EvidenceRemoteDataSource>((ref
   throw UnimplementedError('ApiClient provider not implemented');
 });
 
-final evidenceListProvider = ChangeNotifierProvider<EvidenceListNotifier>((ref) {
-  return EvidenceListNotifier(ref.read(evidenceRepositoryProvider));
+final evidenceListProvider = ChangeNotifierProvider.family<EvidenceListNotifier, String>((ref, incidentId) {
+  return EvidenceListNotifier(ref.read(evidenceRepositoryProvider), incidentId);
 });
 
 class EvidenceListNotifier extends ChangeNotifier {
   final EvidenceRepository _repository;
+  final String _incidentId;
   List<Evidence> _evidence = [];
   bool _isLoading = false;
   String? _errorMessage;
   int _currentPage = 1;
   int _total = 0;
 
-  EvidenceListNotifier(this._repository);
+  EvidenceListNotifier(this._repository, this._incidentId);
 
   List<Evidence> get evidence => _evidence;
   bool get isLoading => _isLoading;
@@ -41,7 +42,7 @@ class EvidenceListNotifier extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final result = await _repository.getEvidence(page: _currentPage);
+    final result = await _repository.getEvidenceByIncident(_incidentId, page: _currentPage);
     result.fold(
       (failure) {
         _errorMessage = failure.message;
@@ -54,20 +55,6 @@ class EvidenceListNotifier extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
-  }
-
-  Future<void> deleteEvidence(String id) async {
-    final result = await _repository.deleteEvidence(id);
-    result.fold(
-      (failure) {
-        _errorMessage = failure.message;
-        notifyListeners();
-      },
-      (_) {
-        _evidence.removeWhere((e) => e.id == id);
-        notifyListeners();
-      },
-    );
   }
 
   void clearError() {

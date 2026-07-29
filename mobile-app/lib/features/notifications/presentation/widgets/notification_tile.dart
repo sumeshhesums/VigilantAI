@@ -14,34 +14,33 @@ class NotificationTile extends StatelessWidget {
     this.onMarkRead,
   });
 
-  IconData _typeIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'alert':
-      case 'warning':
-        return Icons.warning_amber;
-      case 'info':
-        return Icons.info_outline;
-      case 'error':
-        return Icons.error_outline;
-      case 'success':
-        return Icons.check_circle_outline;
+  IconData _channelIcon(String channel) {
+    switch (channel.toLowerCase()) {
+      case 'email':
+        return Icons.email_outlined;
+      case 'sms':
+        return Icons.sms_outlined;
+      case 'push':
+        return Icons.notifications_outlined;
+      case 'webhook':
+        return Icons.webhook;
       default:
         return Icons.notifications_outlined;
     }
   }
 
-  Color _typeColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'alert':
-      case 'warning':
-        return Colors.orange;
-      case 'error':
-        return Colors.red;
-      case 'success':
-        return Colors.green;
-      case 'info':
-      default:
+  Color _channelColor(String channel) {
+    switch (channel.toLowerCase()) {
+      case 'email':
         return Colors.blue;
+      case 'sms':
+        return Colors.green;
+      case 'push':
+        return Colors.orange;
+      case 'webhook':
+        return Colors.purple;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -49,20 +48,20 @@ class NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: _typeColor(notification.type).withOpacity(0.1),
+        backgroundColor: _channelColor(notification.channel).withOpacity(0.1),
         child: Icon(
-          _typeIcon(notification.type),
-          color: _typeColor(notification.type),
+          _channelIcon(notification.channel),
+          color: _channelColor(notification.channel),
         ),
       ),
       title: Text(
-        notification.title,
+        notification.channel,
         style: TextStyle(
           fontWeight: notification.isUnread ? FontWeight.bold : FontWeight.normal,
         ),
       ),
       subtitle: Text(
-        notification.message,
+        notification.recipient,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),

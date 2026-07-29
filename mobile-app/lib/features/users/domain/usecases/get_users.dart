@@ -9,7 +9,7 @@ class GetUsersUseCase {
 
   GetUsersUseCase(this._repository);
 
-  Future<Either<Failure, List<User>>> execute({int page = 1, int pageSize = 20}) {
-    return _repository.getUsers(page: page, pageSize: pageSize);
+  Future<Either<Failure, List<User>>> execute({int page = 1, int perPage = 20}) {
+    return _repository.getUsers(page: page, perPage: perPage);
   }
 }

@@ -242,6 +242,19 @@ impl<R: NotificationRepository> NotificationService<R> {
             .ok_or_else(|| anyhow!("notification not found"))
     }
 
+    /// Mark a single notification as read.
+    pub async fn mark_as_read(&self, pool: &PgPool, id: uuid::Uuid) -> Result<Notification> {
+        self.repository
+            .mark_as_read(pool, id)
+            .await?
+            .ok_or_else(|| anyhow!("notification not found"))
+    }
+
+    /// Mark all notifications as read.
+    pub async fn mark_all_as_read(&self, pool: &PgPool) -> Result<u64> {
+        self.repository.mark_all_as_read(pool).await
+    }
+
     fn is_channel_enabled(&self, channel: &NotificationChannel) -> bool {
         match channel {
             NotificationChannel::Email => self.config.email_enabled,
@@ -340,6 +353,8 @@ mod tests {
             error_message: None,
             created_at: chrono::Utc::now(),
             sent_at: Some(chrono::Utc::now()),
+            is_read: false,
+            read_at: None,
         };
 
         let response = NotificationService::<
@@ -364,6 +379,8 @@ mod tests {
             error_message: None,
             created_at: chrono::Utc::now(),
             sent_at: None,
+            is_read: false,
+            read_at: None,
         };
 
         let response = NotificationService::<

@@ -37,12 +37,15 @@ class NotificationListNotifier extends ChangeNotifier {
       if (n.id == id) {
         return entity.Notification(
           id: n.id,
-          title: n.title,
-          message: n.message,
-          type: n.type,
-          read: true,
           incidentId: n.incidentId,
+          channel: n.channel,
+          recipient: n.recipient,
+          status: 'sent',
+          attempts: n.attempts,
+          responseCode: n.responseCode,
+          errorMessage: n.errorMessage,
           createdAt: n.createdAt,
+          sentAt: n.sentAt,
         );
       }
       return n;
@@ -55,12 +58,15 @@ class NotificationListNotifier extends ChangeNotifier {
     _notifications = _notifications.map((n) {
       return entity.Notification(
         id: n.id,
-        title: n.title,
-        message: n.message,
-        type: n.type,
-        read: true,
         incidentId: n.incidentId,
+        channel: n.channel,
+        recipient: n.recipient,
+        status: 'sent',
+        attempts: n.attempts,
+        responseCode: n.responseCode,
+        errorMessage: n.errorMessage,
         createdAt: n.createdAt,
+        sentAt: n.sentAt,
       );
     }).toList();
     _unreadCount = 0;

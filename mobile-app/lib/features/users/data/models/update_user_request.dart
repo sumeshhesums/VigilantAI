@@ -9,15 +9,11 @@ class UpdateUserRequest {
   final String? firstName;
   @JsonKey(name: 'last_name')
   final String? lastName;
-  final String? role;
-  final bool? enabled;
 
   const UpdateUserRequest({
     this.email,
     this.firstName,
     this.lastName,
-    this.role,
-    this.enabled,
   });
 
   Map<String, dynamic> toJson() => _$UpdateUserRequestToJson(this);

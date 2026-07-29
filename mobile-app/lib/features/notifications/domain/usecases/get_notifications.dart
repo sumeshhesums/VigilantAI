@@ -9,7 +9,7 @@ class GetNotificationsUseCase {
 
   GetNotificationsUseCase(this._repository);
 
-  Future<Either<Failure, List<Notification>>> execute({int page = 1, int pageSize = 20}) {
-    return _repository.getNotifications(page: page, pageSize: pageSize);
+  Future<Either<Failure, List<Notification>>> execute({int page = 1, int perPage = 20}) {
+    return _repository.getNotifications(page: page, perPage: perPage);
   }
 }

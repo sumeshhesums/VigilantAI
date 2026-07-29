@@ -128,6 +128,8 @@ pub struct Notification {
     pub error_message: Option<String>,
     pub created_at: DateTime<Utc>,
     pub sent_at: Option<DateTime<Utc>>,
+    pub is_read: bool,
+    pub read_at: Option<DateTime<Utc>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -244,6 +246,8 @@ mod tests {
             error_message: None,
             created_at: Utc::now(),
             sent_at: Some(Utc::now()),
+            is_read: false,
+            read_at: None,
         };
         let json = serde_json::to_string(&notification).unwrap();
         let deserialized: Notification = serde_json::from_str(&json).unwrap();

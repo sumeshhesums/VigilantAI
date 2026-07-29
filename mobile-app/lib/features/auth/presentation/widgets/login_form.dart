@@ -25,7 +25,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
 
   void _onSubmit() {
     if (_formKey.currentState?.validate() ?? false) {
-      ref.read(authProvider.notifier).login(
+      ref.read(authStateProvider.notifier).login(
             _emailController.text.trim(),
             _passwordController.text,
           );
@@ -34,6 +34,9 @@ class _LoginFormState extends ConsumerState<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final isLoading = authState == AuthState.loading;
+
     return Form(
       key: _formKey,
       child: Column(
@@ -49,11 +52,8 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Email is required';
-              }
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                  .hasMatch(value.trim())) {
+              if (value == null || value.trim().isEmpty) return 'Email is required';
+              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
                 return 'Enter a valid email';
               }
               return null;
@@ -68,27 +68,17 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               prefixIcon: const Icon(Icons.lock_outlined),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_off
-                      : Icons.visibility,
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  });
-                },
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
             obscureText: _obscurePassword,
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _onSubmit(),
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Password is required';
-              }
-              if (value.length < 8) {
-                return 'Password must be at least 8 characters';
-              }
+              if (value == null || value.isEmpty) return 'Password is required';
+              if (value.length < 8) return 'Password must be at least 8 characters';
               return null;
             },
           ),
@@ -100,21 +90,25 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               child: const Text('Forgot Password?'),
             ),
           ),
+          if (authState == AuthState.error)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                'Invalid email or password',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                textAlign: TextAlign.center,
+              ),
+            ),
           const SizedBox(height: 24),
-          Consumer(
-            builder: (context, ref, _) {
-              final authState = ref.watch(authProvider);
-              return ElevatedButton(
-                onPressed: authState.isLoading ? null : _onSubmit,
-                child: authState.isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Sign In'),
-              );
-            },
+          ElevatedButton(
+            onPressed: isLoading ? null : _onSubmit,
+            child: isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Sign In'),
           ),
         ],
       ),

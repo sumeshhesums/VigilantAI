@@ -38,7 +38,7 @@ class IncidentCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      incident.title,
+                      incident.eventType,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -48,7 +48,7 @@ class IncidentCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      incident.cameraInfo.cameraName,
+                      'Camera: ${incident.cameraId}',
                       style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
@@ -60,7 +60,7 @@ class IncidentCard extends StatelessWidget {
                         IncidentStatusBadge(status: incident.status),
                         const Spacer(),
                         Text(
-                          _formatDate(incident.detectedAt),
+                          _formatDate(incident.timestamp),
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,

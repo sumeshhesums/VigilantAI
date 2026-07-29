@@ -11,16 +11,10 @@ class UpdateIncidentUseCase {
 
   Future<Either<Failure, Incident>> execute(
     String id, {
-    String? title,
-    String? description,
-    String? severity,
-    String? status,
+    required String status,
   }) =>
       _repository.updateIncident(
         id,
-        title: title,
-        description: description,
-        severity: severity,
         status: status,
       );
 }

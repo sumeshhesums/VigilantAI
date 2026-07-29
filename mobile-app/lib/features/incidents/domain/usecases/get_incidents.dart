@@ -11,7 +11,7 @@ class GetIncidentsUseCase {
 
   Future<Either<Failure, PaginatedIncidents>> execute({
     int page = 1,
-    int pageSize = 20,
+    int perPage = 20,
   }) =>
-      _repository.getIncidents(page: page, pageSize: pageSize);
+      _repository.getIncidents(page: page, perPage: perPage);
 }

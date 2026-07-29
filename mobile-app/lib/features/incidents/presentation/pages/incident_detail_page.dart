@@ -31,16 +31,6 @@ class _IncidentDetailPageState extends ConsumerState<IncidentDetailPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Incident Details'),
-        actions: [
-          if (notifier.selectedIncident != null)
-            PopupMenuButton<String>(
-              onSelected: (value) {},
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                const PopupMenuItem(value: 'delete', child: Text('Delete')),
-              ],
-            ),
-        ],
       ),
       body: _buildBody(notifier),
     );
@@ -84,8 +74,6 @@ class _IncidentDetailPageState extends ConsumerState<IncidentDetailPage> {
             children: [
               _buildHeader(incident),
               const SizedBox(height: 20),
-              _buildSection('Description', incident.description),
-              const SizedBox(height: 16),
               _buildInfoSection(incident),
             ],
           ),
@@ -113,7 +101,7 @@ class _IncidentDetailPageState extends ConsumerState<IncidentDetailPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                incident.title,
+                incident.eventType,
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
@@ -134,46 +122,19 @@ class _IncidentDetailPageState extends ConsumerState<IncidentDetailPage> {
     );
   }
 
-  Widget _buildSection(String title, String content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceDark.withOpacity(0.03),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            content,
-            style: TextStyle(fontSize: 14, color: AppColors.textPrimary.withOpacity(0.85)),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildInfoSection(Incident incident) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Information', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        _buildInfoRow('Camera', incident.cameraInfo.cameraName),
-        _buildInfoRow('Camera ID', incident.cameraInfo.cameraId),
-        _buildInfoRow('Detected', _formatDateTime(incident.detectedAt)),
-        if (incident.acknowledgedAt != null)
-          _buildInfoRow('Acknowledged', _formatDateTime(incident.acknowledgedAt!)),
-        if (incident.resolvedAt != null)
-          _buildInfoRow('Resolved', _formatDateTime(incident.resolvedAt!)),
+        _buildInfoRow('Camera ID', incident.cameraId),
+        _buildInfoRow('Event Type', incident.eventType),
+        _buildInfoRow('Confidence', '${(incident.confidence * 100).toStringAsFixed(1)}%'),
+        _buildInfoRow('Timestamp', _formatDateTime(incident.timestamp)),
         _buildInfoRow('Created', _formatDateTime(incident.createdAt)),
-        _buildInfoRow('Updated', _formatDateTime(incident.updatedAt)),
+        if (incident.updatedAt != null)
+          _buildInfoRow('Updated', _formatDateTime(incident.updatedAt!)),
       ],
     );
   }

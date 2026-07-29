@@ -76,7 +76,7 @@ class UserListNotifier extends ChangeNotifier {
     required String password,
     required String firstName,
     required String lastName,
-    required String role,
+    required List<String> roles,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -87,7 +87,7 @@ class UserListNotifier extends ChangeNotifier {
       password: password,
       firstName: firstName,
       lastName: lastName,
-      role: role,
+      roles: roles,
     );
     result.fold(
       (failure) {
@@ -102,7 +102,7 @@ class UserListNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateUser(String id, {String? email, String? firstName, String? lastName, String? role, bool? enabled}) async {
+  Future<void> updateUser(String id, {String? email, String? firstName, String? lastName}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -112,8 +112,6 @@ class UserListNotifier extends ChangeNotifier {
       email: email,
       firstName: firstName,
       lastName: lastName,
-      role: role,
-      enabled: enabled,
     );
     result.fold(
       (failure) {

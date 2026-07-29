@@ -11,16 +11,18 @@ class CreateIncidentUseCase {
 
   Future<Either<Failure, Incident>> execute({
     required String cameraId,
-    required String title,
-    String? description,
     required String severity,
-    String? status,
+    required String eventType,
+    required double confidence,
+    Map<String, dynamic>? boundingBox,
+    Map<String, dynamic>? metadata,
   }) =>
       _repository.createIncident(
         cameraId: cameraId,
-        title: title,
-        description: description,
         severity: severity,
-        status: status,
+        eventType: eventType,
+        confidence: confidence,
+        boundingBox: boundingBox,
+        metadata: metadata,
       );
 }

@@ -5,14 +5,15 @@ import '../providers/evidence_provider.dart';
 import '../widgets/evidence_card.dart';
 
 class EvidenceListPage extends ConsumerWidget {
-  final String? incidentId;
+  final String incidentId;
 
-  const EvidenceListPage({super.key, this.incidentId});
+  const EvidenceListPage({super.key, required this.incidentId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.watch(evidenceListProvider);
-    final state = ref.read(evidenceListProvider.notifier);
+    final provider = evidenceListProvider(incidentId);
+    final notifier = ref.watch(provider);
+    final state = ref.read(provider.notifier);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Evidence')),
@@ -39,10 +40,7 @@ class EvidenceListPage extends ConsumerWidget {
                       padding: const EdgeInsets.all(8),
                       itemBuilder: (context, index) {
                         final item = notifier.evidence[index];
-                        return EvidenceCard(
-                          evidence: item,
-                          onDelete: () => state.deleteEvidence(item.id),
-                        );
+                        return EvidenceCard(evidence: item);
                       },
                     ),
       floatingActionButton: FloatingActionButton(

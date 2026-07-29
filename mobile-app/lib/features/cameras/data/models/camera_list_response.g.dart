@@ -13,7 +13,7 @@ CameraListResponse _$CameraListResponseFromJson(Map<String, dynamic> json) =>
           .toList(),
       total: (json['total'] as num).toInt(),
       page: (json['page'] as num).toInt(),
-      pageSize: (json['page_size'] as num).toInt(),
+      perPage: (json['per_page'] as num).toInt(),
     );
 
 Map<String, dynamic> _$CameraListResponseToJson(CameraListResponse instance) =>
@@ -21,5 +21,5 @@ Map<String, dynamic> _$CameraListResponseToJson(CameraListResponse instance) =>
       'cameras': instance.cameras,
       'total': instance.total,
       'page': instance.page,
-      'page_size': instance.pageSize,
+      'per_page': instance.perPage,
     };

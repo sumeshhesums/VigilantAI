@@ -3,8 +3,8 @@ use axum::http::StatusCode;
 use axum::Json;
 
 use crate::dto::notification::{
-    NotificationListResponse, NotificationPaginationParams, NotificationResponse,
-    SendNotificationRequest,
+    MarkAllReadResponse, NotificationListResponse, NotificationPaginationParams,
+    NotificationResponse, SendNotificationRequest,
 };
 use crate::errors::AppError;
 use crate::middleware::auth::{AuthUser, UserRoles};
@@ -163,6 +163,71 @@ pub async fn retry_notifications(
         retried.into_iter().map(notification_response).collect();
 
     Ok(Json(responses))
+}
+
+// ---------------------------------------------------------------------------
+// PUT /api/v1/notifications/:id/read
+// Allowed: Viewer, Operator, SecurityAdmin, SystemAdmin
+// ---------------------------------------------------------------------------
+pub async fn mark_notification_read(
+    AuthUser { .. }: AuthUser,
+    UserRoles(roles): UserRoles,
+    State(state): State<AppState>,
+    Path(id): Path<uuid::Uuid>,
+) -> Result<Json<NotificationResponse>, AppError> {
+    require_any_role(
+        &roles,
+        &[
+            Role::Viewer,
+            Role::Operator,
+            Role::SecurityAdmin,
+            Role::SystemAdmin,
+        ],
+    )?;
+
+    let service = make_service(&state);
+
+    let notification = service
+        .mark_as_read(&state.postgres_pool, id)
+        .await
+        .map_err(|e| {
+            if e.to_string().contains("not found") {
+                AppError::NotFound
+            } else {
+                AppError::Internal(e)
+            }
+        })?;
+
+    Ok(Json(notification_response(notification)))
+}
+
+// ---------------------------------------------------------------------------
+// PUT /api/v1/notifications/mark-all-read
+// Allowed: Viewer, Operator, SecurityAdmin, SystemAdmin
+// ---------------------------------------------------------------------------
+pub async fn mark_all_notifications_read(
+    AuthUser { .. }: AuthUser,
+    UserRoles(roles): UserRoles,
+    State(state): State<AppState>,
+) -> Result<Json<MarkAllReadResponse>, AppError> {
+    require_any_role(
+        &roles,
+        &[
+            Role::Viewer,
+            Role::Operator,
+            Role::SecurityAdmin,
+            Role::SystemAdmin,
+        ],
+    )?;
+
+    let service = make_service(&state);
+
+    let affected = service
+        .mark_all_as_read(&state.postgres_pool)
+        .await
+        .map_err(AppError::Internal)?;
+
+    Ok(Json(MarkAllReadResponse { affected }))
 }
 
 // ---------------------------------------------------------------------------

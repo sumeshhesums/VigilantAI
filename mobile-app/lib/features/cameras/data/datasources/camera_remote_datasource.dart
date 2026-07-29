@@ -6,7 +6,7 @@ import '../models/create_camera_request.dart';
 import '../models/update_camera_request.dart';
 
 abstract class CameraRemoteDataSource {
-  Future<CameraListResponse> getCameras({int page = 1, int pageSize = 20});
+  Future<CameraListResponse> getCameras({int page = 1, int perPage = 20});
   Future<CameraModel> getCameraById(String id);
   Future<CameraModel> createCamera(CreateCameraRequest request);
   Future<CameraModel> updateCamera(String id, UpdateCameraRequest request);
@@ -19,10 +19,10 @@ class CameraRemoteDataSourceImpl implements CameraRemoteDataSource {
   CameraRemoteDataSourceImpl(this._client);
 
   @override
-  Future<CameraListResponse> getCameras({int page = 1, int pageSize = 20}) async {
+  Future<CameraListResponse> getCameras({int page = 1, int perPage = 20}) async {
     final result = await _client.get<Map<String, dynamic>>(
       ApiConstants.cameras,
-      queryParameters: {'page': page, 'page_size': pageSize},
+      queryParameters: {'page': page, 'per_page': perPage},
     );
     return result.fold(
       (failure) => throw failure,
@@ -55,7 +55,7 @@ class CameraRemoteDataSourceImpl implements CameraRemoteDataSource {
 
   @override
   Future<CameraModel> updateCamera(String id, UpdateCameraRequest request) async {
-    final result = await _client.put<Map<String, dynamic>>(
+    final result = await _client.patch<Map<String, dynamic>>(
       '${ApiConstants.cameraById}$id',
       data: request.toJson(),
     );

@@ -12,6 +12,7 @@ pub mod rbac;
 pub mod repository;
 pub mod routes;
 pub mod security;
+pub mod ws;
 pub mod services;
 pub mod startup;
 pub mod state;

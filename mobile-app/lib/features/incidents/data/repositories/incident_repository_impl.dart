@@ -16,15 +16,15 @@ class IncidentRepositoryImpl implements IncidentRepository {
   @override
   Future<Either<Failure, PaginatedIncidents>> getIncidents({
     int page = 1,
-    int pageSize = 20,
+    int perPage = 20,
   }) async {
     try {
-      final model = await _remoteDataSource.getIncidents(page: page, pageSize: pageSize);
+      final model = await _remoteDataSource.getIncidents(page: page, perPage: perPage);
       return Right(PaginatedIncidents(
         incidents: model.incidents.map(_mapToEntity).toList(),
         total: model.total,
         page: model.page,
-        pageSize: model.pageSize,
+        perPage: model.perPage,
       ));
     } on Failure catch (f) {
       return Left(f);
@@ -48,18 +48,20 @@ class IncidentRepositoryImpl implements IncidentRepository {
   @override
   Future<Either<Failure, Incident>> createIncident({
     required String cameraId,
-    required String title,
-    String? description,
     required String severity,
-    String? status,
+    required String eventType,
+    required double confidence,
+    Map<String, dynamic>? boundingBox,
+    Map<String, dynamic>? metadata,
   }) async {
     try {
       final request = CreateIncidentRequest(
         cameraId: cameraId,
-        title: title,
-        description: description,
         severity: severity,
-        status: status,
+        eventType: eventType,
+        confidence: confidence,
+        boundingBox: boundingBox,
+        metadata: metadata,
       );
       final model = await _remoteDataSource.createIncident(request);
       return Right(_mapToEntity(model));
@@ -73,18 +75,10 @@ class IncidentRepositoryImpl implements IncidentRepository {
   @override
   Future<Either<Failure, Incident>> updateIncident(
     String id, {
-    String? title,
-    String? description,
-    String? severity,
-    String? status,
+    required String status,
   }) async {
     try {
-      final request = UpdateIncidentRequest(
-        title: title,
-        description: description,
-        severity: severity,
-        status: status,
-      );
+      final request = UpdateIncidentRequest(status: status);
       final model = await _remoteDataSource.updateIncident(id, request);
       return Right(_mapToEntity(model));
     } on Failure catch (f) {
@@ -94,34 +88,19 @@ class IncidentRepositoryImpl implements IncidentRepository {
     }
   }
 
-  @override
-  Future<Either<Failure, void>> deleteIncident(String id) async {
-    try {
-      await _remoteDataSource.deleteIncident(id);
-      return const Right(null);
-    } on Failure catch (f) {
-      return Left(f);
-    } catch (e) {
-      return const Left(ServerFailure(message: 'Failed to delete incident'));
-    }
-  }
-
   Incident _mapToEntity(IncidentModel model) {
     return Incident(
       id: model.id,
-      cameraInfo: CameraInfo(
-        cameraId: model.cameraId,
-        cameraName: model.cameraName,
-      ),
-      title: model.title,
-      description: model.description,
+      cameraId: model.cameraId,
+      timestamp: DateTime.parse(model.timestamp),
       severity: model.severity,
       status: model.status,
-      detectedAt: DateTime.parse(model.detectedAt),
-      acknowledgedAt: model.acknowledgedAt != null ? DateTime.parse(model.acknowledgedAt!) : null,
-      resolvedAt: model.resolvedAt != null ? DateTime.parse(model.resolvedAt!) : null,
+      eventType: model.eventType,
+      confidence: model.confidence,
+      boundingBox: model.boundingBox,
+      metadata: model.metadata,
       createdAt: DateTime.parse(model.createdAt),
-      updatedAt: DateTime.parse(model.updatedAt),
+      updatedAt: model.updatedAt != null ? DateTime.parse(model.updatedAt!) : null,
     );
   }
 }

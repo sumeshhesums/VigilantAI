@@ -12,24 +12,17 @@ class EvidenceRepositoryImpl implements EvidenceRepository {
   EvidenceRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<Either<Failure, List<Evidence>>> getEvidence({int page = 1, int pageSize = 20}) async {
+  Future<Either<Failure, List<Evidence>>> getEvidenceByIncident(
+    String incidentId, {
+    int page = 1,
+    int perPage = 20,
+  }) async {
     try {
-      final response = await _remoteDataSource.getEvidence(page: page, pageSize: pageSize);
-      final list = (response['evidence'] as List)
-          .map((e) => _mapToEntity(EvidenceModel.fromJson(e as Map<String, dynamic>)))
-          .toList();
-      return Right(list);
-    } on Failure catch (f) {
-      return Left(f);
-    } catch (e) {
-      return const Left(ServerFailure(message: 'Failed to fetch evidence'));
-    }
-  }
-
-  @override
-  Future<Either<Failure, List<Evidence>>> getEvidenceByIncident(String incidentId) async {
-    try {
-      final response = await _remoteDataSource.getEvidenceByIncident(incidentId);
+      final response = await _remoteDataSource.getEvidenceByIncident(
+        incidentId,
+        page: page,
+        perPage: perPage,
+      );
       final list = (response['evidence'] as List)
           .map((e) => _mapToEntity(EvidenceModel.fromJson(e as Map<String, dynamic>)))
           .toList();
@@ -78,12 +71,11 @@ class EvidenceRepositoryImpl implements EvidenceRepository {
       id: model.id,
       incidentId: model.incidentId,
       fileName: model.fileName,
-      fileType: model.fileType,
+      contentType: model.contentType,
       fileSize: model.fileSize,
-      fileUrl: model.fileUrl,
-      thumbnailUrl: model.thumbnailUrl,
-      uploadedBy: model.uploadedBy,
-      uploadedAt: DateTime.parse(model.uploadedAt),
+      sha256: model.sha256,
+      width: model.width,
+      height: model.height,
       createdAt: DateTime.parse(model.createdAt),
     );
   }

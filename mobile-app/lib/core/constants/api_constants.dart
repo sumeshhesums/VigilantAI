@@ -2,7 +2,7 @@ class ApiConstants {
   static const String auth = '/auth';
   static const String login = '/auth/login';
   static const String register = '/auth/register';
-  static const String refreshToken = '/auth/refresh-token';
+  static const String refreshToken = '/auth/refresh';
   static const String logout = '/auth/logout';
   static const String me = '/auth/me';
 
@@ -13,8 +13,6 @@ class ApiConstants {
   static const String incidentById = '/incidents/';
 
   static const String evidence = '/evidence';
-  static const String evidenceByIncident = '/evidence/incident/';
-  static const String evidenceUpload = '/evidence/upload';
   static const String evidenceById = '/evidence/';
 
   static const String notifications = '/notifications';

@@ -50,8 +50,8 @@ class UserDetailPage extends ConsumerWidget {
                           const SizedBox(height: 24),
                           _detailRow('Name', notifier.selectedUser!.fullName),
                           _detailRow('Email', notifier.selectedUser!.email),
-                          _detailRow('Role', notifier.selectedUser!.role),
-                          _detailRow('Status', notifier.selectedUser!.enabled ? 'Enabled' : 'Disabled'),
+                          _detailRow('Roles', notifier.selectedUser!.roles.join(', ')),
+                          _detailRow('Status', notifier.selectedUser!.isActive ? 'Active' : 'Inactive'),
                           _detailRow('Created', notifier.selectedUser!.createdAt.toString()),
                           if (notifier.selectedUser!.updatedAt != null)
                             _detailRow('Updated', notifier.selectedUser!.updatedAt.toString()),

@@ -5,8 +5,11 @@ import '../../../../core/network/api_client.dart';
 import '../models/evidence_model.dart';
 
 abstract class EvidenceRemoteDataSource {
-  Future<Map<String, dynamic>> getEvidence({int page = 1, int pageSize = 20});
-  Future<Map<String, dynamic>> getEvidenceByIncident(String incidentId);
+  Future<Map<String, dynamic>> getEvidenceByIncident(
+    String incidentId, {
+    int page = 1,
+    int perPage = 20,
+  });
   Future<EvidenceModel> uploadEvidence({
     required String filePath,
     required String fileName,
@@ -21,21 +24,14 @@ class EvidenceRemoteDataSourceImpl implements EvidenceRemoteDataSource {
   EvidenceRemoteDataSourceImpl(this._client);
 
   @override
-  Future<Map<String, dynamic>> getEvidence({int page = 1, int pageSize = 20}) async {
+  Future<Map<String, dynamic>> getEvidenceByIncident(
+    String incidentId, {
+    int page = 1,
+    int perPage = 20,
+  }) async {
     final result = await _client.get<Map<String, dynamic>>(
-      ApiConstants.evidence,
-      queryParameters: {'page': page, 'page_size': pageSize},
-    );
-    return result.fold(
-      (failure) => throw failure,
-      (response) => response.data!,
-    );
-  }
-
-  @override
-  Future<Map<String, dynamic>> getEvidenceByIncident(String incidentId) async {
-    final result = await _client.get<Map<String, dynamic>>(
-      '${ApiConstants.evidenceByIncident}$incidentId',
+      '${ApiConstants.incidentById}$incidentId/evidence',
+      queryParameters: {'page': page, 'per_page': perPage},
     );
     return result.fold(
       (failure) => throw failure,
@@ -51,10 +47,9 @@ class EvidenceRemoteDataSourceImpl implements EvidenceRemoteDataSource {
   }) async {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath, filename: fileName),
-      'incident_id': incidentId,
     });
     final result = await _client.upload<Map<String, dynamic>>(
-      ApiConstants.evidenceUpload,
+      '${ApiConstants.incidentById}$incidentId/evidence',
       data: formData,
     );
     return result.fold(

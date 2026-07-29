@@ -39,7 +39,7 @@ class UserCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    user.role,
+                    user.roles.join(', '),
                     style: TextStyle(
                       fontSize: 11,
                       color: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -48,14 +48,14 @@ class UserCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  user.enabled ? Icons.check_circle : Icons.cancel,
+                  user.isActive ? Icons.check_circle : Icons.cancel,
                   size: 14,
-                  color: user.enabled ? Colors.green : Colors.red,
+                  color: user.isActive ? Colors.green : Colors.red,
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  user.enabled ? 'Enabled' : 'Disabled',
-                  style: TextStyle(fontSize: 11, color: user.enabled ? Colors.green : Colors.red),
+                  user.isActive ? 'Active' : 'Inactive',
+                  style: TextStyle(fontSize: 11, color: user.isActive ? Colors.green : Colors.red),
                 ),
               ],
             ),

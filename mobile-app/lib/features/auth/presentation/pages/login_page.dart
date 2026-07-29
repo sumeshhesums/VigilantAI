@@ -1,10 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class LoginPage extends StatelessWidget {
+import '../../../../core/theme/app_colors.dart';
+import '../providers/auth_provider.dart';
+import '../widgets/login_form.dart';
+
+class LoginPage extends ConsumerWidget {
   const LoginPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<AuthState>(authStateProvider, (prev, next) {
+      if (next == AuthState.authenticated) {
+        context.go('/');
+      }
+    });
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -17,7 +29,7 @@ class LoginPage extends StatelessWidget {
                 const Icon(
                   Icons.security,
                   size: 80,
-                  color: Color(0xFF1565C0),
+                  color: AppColors.primary,
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -25,7 +37,7 @@ class LoginPage extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1565C0),
+                        color: AppColors.primary,
                       ),
                 ),
                 const SizedBox(height: 8),
@@ -51,50 +63,7 @@ class LoginPage extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 32),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'Enter your email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'Enter your password',
-                    prefixIcon: Icon(Icons.lock_outlined),
-                    suffixIcon: Icon(Icons.visibility_off),
-                  ),
-                  obscureText: true,
-                  textInputAction: TextInputAction.done,
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {},
-                    child: const Text('Forgot Password?'),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {},
-                  child: const Text('Sign In'),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("Don't have an account?"),
-                    TextButton(
-                      onPressed: () {},
-                      child: const Text('Sign Up'),
-                    ),
-                  ],
-                ),
+                const LoginForm(),
               ],
             ),
           ),

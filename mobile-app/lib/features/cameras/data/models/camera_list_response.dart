@@ -9,14 +9,14 @@ class CameraListResponse {
   final List<CameraModel> cameras;
   final int total;
   final int page;
-  @JsonKey(name: 'page_size')
-  final int pageSize;
+  @JsonKey(name: 'per_page')
+  final int perPage;
 
   const CameraListResponse({
     required this.cameras,
     required this.total,
     required this.page,
-    required this.pageSize,
+    required this.perPage,
   });
 
   factory CameraListResponse.fromJson(Map<String, dynamic> json) =>

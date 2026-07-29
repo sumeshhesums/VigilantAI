@@ -12,7 +12,7 @@ CreateUserRequest _$CreateUserRequestFromJson(Map<String, dynamic> json) =>
       password: json['password'] as String,
       firstName: json['first_name'] as String,
       lastName: json['last_name'] as String,
-      role: json['role'] as String,
+      roles: (json['roles'] as List<dynamic>).map((e) => e as String).toList(),
     );
 
 Map<String, dynamic> _$CreateUserRequestToJson(CreateUserRequest instance) =>
@@ -21,5 +21,5 @@ Map<String, dynamic> _$CreateUserRequestToJson(CreateUserRequest instance) =>
       'password': instance.password,
       'first_name': instance.firstName,
       'last_name': instance.lastName,
-      'role': instance.role,
+      'roles': instance.roles,
     };

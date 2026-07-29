@@ -51,7 +51,7 @@ class IncidentNotifier extends ChangeNotifier {
       return;
     }
 
-    _repository.getIncidents(page: _currentPage, pageSize: _pageSize).then((result) {
+    _repository.getIncidents(page: _currentPage, perPage: _pageSize).then((result) {
       result.fold(
         (failure) {
           _state = IncidentLoadingState.error;
