@@ -35,13 +35,16 @@ class EvidenceListPage extends ConsumerWidget {
                 )
               : notifier.evidence.isEmpty
                   ? const Center(child: Text('No evidence found'))
-                  : ListView.builder(
-                      itemCount: notifier.evidence.length,
-                      padding: const EdgeInsets.all(8),
-                      itemBuilder: (context, index) {
-                        final item = notifier.evidence[index];
-                        return EvidenceCard(evidence: item);
-                      },
+                  : RefreshIndicator(
+                      onRefresh: () => state.loadEvidence(refresh: true),
+                      child: ListView.builder(
+                        itemCount: notifier.evidence.length,
+                        padding: const EdgeInsets.all(8),
+                        itemBuilder: (context, index) {
+                          final item = notifier.evidence[index];
+                          return EvidenceCard(evidence: item);
+                        },
+                      ),
                     ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

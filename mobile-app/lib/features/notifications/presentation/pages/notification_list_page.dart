@@ -41,16 +41,19 @@ class NotificationListPage extends ConsumerWidget {
                 )
               : notifier.notifications.isEmpty
                   ? const Center(child: Text('No notifications'))
-                  : ListView.separated(
-                      itemCount: notifier.notifications.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final item = notifier.notifications[index];
-                        return NotificationTile(
-                          notification: item,
-                          onMarkRead: () => state.markRead(item.id),
-                        );
-                      },
+                  : RefreshIndicator(
+                      onRefresh: () => state.loadNotifications(refresh: true),
+                      child: ListView.separated(
+                        itemCount: notifier.notifications.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final item = notifier.notifications[index];
+                          return NotificationTile(
+                            notification: item,
+                            onMarkRead: () => state.markRead(item.id),
+                          );
+                        },
+                      ),
                     ),
     );
   }

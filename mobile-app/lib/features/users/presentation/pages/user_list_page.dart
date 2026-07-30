@@ -32,19 +32,22 @@ class UserListPage extends ConsumerWidget {
                 )
               : notifier.users.isEmpty
                   ? const Center(child: Text('No users found'))
-                  : ListView.builder(
-                      itemCount: notifier.users.length,
-                      padding: const EdgeInsets.all(8),
-                      itemBuilder: (context, index) {
-                        final item = notifier.users[index];
-                        return UserCard(
-                          user: item,
-                          onTap: () {
-                            // TODO: navigate to user detail
-                          },
-                          onDelete: () => state.deleteUser(item.id),
-                        );
-                      },
+                  : RefreshIndicator(
+                      onRefresh: () => state.loadUsers(refresh: true),
+                      child: ListView.builder(
+                        itemCount: notifier.users.length,
+                        padding: const EdgeInsets.all(8),
+                        itemBuilder: (context, index) {
+                          final item = notifier.users[index];
+                          return UserCard(
+                            user: item,
+                            onTap: () {
+                              // TODO: navigate to user detail
+                            },
+                            onDelete: () => state.deleteUser(item.id),
+                          );
+                        },
+                      ),
                     ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../di/providers.dart';
 import '../../domain/entities/camera.dart';
 import '../../domain/usecases/get_cameras_usecase.dart';
 
 final cameraProvider = ChangeNotifierProvider<CameraNotifier>((ref) {
-  return CameraNotifier();
+  final useCase = GetCamerasUseCase(ref.watch(cameraRepositoryProvider));
+  return CameraNotifier()..setGetCamerasUseCase(useCase);
 });
 
 enum CameraLoadStatus { initial, loading, loaded, error }

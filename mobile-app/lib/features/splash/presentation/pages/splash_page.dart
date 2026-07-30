@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class SplashPage extends StatefulWidget {
+import '../../../auth/presentation/providers/auth_provider.dart';
+
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        _checkAuth();
-      }
+    Future.delayed(const Duration(milliseconds: 500), () {
+      ref.read(authStateProvider.notifier).checkAuth();
     });
-  }
-
-  void _checkAuth() {
-    Navigator.of(context).pushReplacementNamed('/login');
   }
 
   @override

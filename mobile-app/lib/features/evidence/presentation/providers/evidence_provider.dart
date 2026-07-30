@@ -1,19 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/datasources/evidence_remote_datasource.dart';
-import '../../data/repositories/evidence_repository_impl.dart';
+import '../../../../di/providers.dart';
 import '../../domain/entities/evidence.dart';
 import '../../domain/repositories/evidence_repository.dart';
-
-final evidenceRepositoryProvider = Provider<EvidenceRepository>((ref) {
-  final dataSource = ref.watch(evidenceRemoteDataSourceProvider);
-  return EvidenceRepositoryImpl(dataSource);
-});
-
-final evidenceRemoteDataSourceProvider = Provider<EvidenceRemoteDataSource>((ref) {
-  throw UnimplementedError('ApiClient provider not implemented');
-});
 
 final evidenceListProvider = ChangeNotifierProvider.family<EvidenceListNotifier, String>((ref, incidentId) {
   return EvidenceListNotifier(ref.read(evidenceRepositoryProvider), incidentId);

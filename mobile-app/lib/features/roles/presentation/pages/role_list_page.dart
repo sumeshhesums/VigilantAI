@@ -32,13 +32,16 @@ class RoleListPage extends ConsumerWidget {
                 )
               : notifier.roles.isEmpty
                   ? const Center(child: Text('No roles found'))
-                  : ListView.builder(
-                      itemCount: notifier.roles.length,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemBuilder: (context, index) {
-                        final item = notifier.roles[index];
-                        return RoleCard(role: item);
-                      },
+                  : RefreshIndicator(
+                      onRefresh: () => state.loadRoles(refresh: true),
+                      child: ListView.builder(
+                        itemCount: notifier.roles.length,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemBuilder: (context, index) {
+                          final item = notifier.roles[index];
+                          return RoleCard(role: item);
+                        },
+                      ),
                     ),
     );
   }

@@ -1,19 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/datasources/user_remote_datasource.dart';
-import '../../data/repositories/user_repository_impl.dart';
+import '../../../../di/providers.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/user_repository.dart';
-
-final userRepositoryProvider = Provider<UserRepository>((ref) {
-  final dataSource = ref.watch(userRemoteDataSourceProvider);
-  return UserRepositoryImpl(dataSource);
-});
-
-final userRemoteDataSourceProvider = Provider<UserRemoteDataSource>((ref) {
-  throw UnimplementedError('ApiClient provider not implemented');
-});
 
 final userListProvider = ChangeNotifierProvider<UserListNotifier>((ref) {
   return UserListNotifier(ref.read(userRepositoryProvider));

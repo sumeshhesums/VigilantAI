@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class SettingsPage extends StatelessWidget {
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/theme/theme_provider.dart';
+
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
@@ -18,8 +24,8 @@ class SettingsPage extends StatelessWidget {
           SwitchListTile(
             title: const Text('Dark Mode'),
             subtitle: const Text('Use dark theme'),
-            value: false,
-            onChanged: (_) {},
+            value: themeMode == ThemeMode.dark,
+            onChanged: (_) => ref.read(themeModeProvider.notifier).toggle(),
           ),
           const Divider(),
           ListTile(
@@ -30,14 +36,14 @@ class SettingsPage extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
-            onTap: () => _showLogoutDialog(context),
+            onTap: () => _showLogoutDialog(context, ref),
           ),
         ],
       ),
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -49,9 +55,10 @@ class SettingsPage extends StatelessWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              Navigator.of(context).pushReplacementNamed('/login');
+              await ref.read(authStateProvider.notifier).logout();
+              if (context.mounted) context.go('/login');
             },
             child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),

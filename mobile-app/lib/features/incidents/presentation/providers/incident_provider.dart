@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../di/providers.dart';
 import '../../domain/entities/incident.dart';
 import '../../domain/repositories/incident_repository.dart';
 
 final incidentProvider = ChangeNotifierProvider<IncidentNotifier>((ref) {
-  return IncidentNotifier();
+  return IncidentNotifier(repository: ref.watch(incidentRepositoryProvider));
 });
 
 enum IncidentLoadingState { initial, loading, loaded, error }

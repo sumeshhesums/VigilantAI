@@ -1,19 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/datasources/role_remote_datasource.dart';
-import '../../data/repositories/role_repository_impl.dart';
+import '../../../../di/providers.dart';
 import '../../domain/entities/role.dart';
 import '../../domain/repositories/role_repository.dart';
-
-final roleRepositoryProvider = Provider<RoleRepository>((ref) {
-  final dataSource = ref.watch(roleRemoteDataSourceProvider);
-  return RoleRepositoryImpl(dataSource);
-});
-
-final roleRemoteDataSourceProvider = Provider<RoleRemoteDataSource>((ref) {
-  throw UnimplementedError('ApiClient provider not implemented');
-});
 
 final roleListProvider = ChangeNotifierProvider<RoleListNotifier>((ref) {
   return RoleListNotifier(ref.read(roleRepositoryProvider));
