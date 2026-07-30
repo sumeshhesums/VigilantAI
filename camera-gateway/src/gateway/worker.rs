@@ -39,6 +39,9 @@ pub struct CameraWorker {
     last_detection: RwLock<Option<DetectionResponse>>,
     last_inference: RwLock<Option<Instant>>,
     last_inference_error: RwLock<Option<AIClientError>>,
+    frames_processed: std::sync::atomic::AtomicU64,
+    current_fps: RwLock<f64>,
+    first_frame_at: RwLock<Option<Instant>>,
     successful_requests: std::sync::atomic::AtomicU64,
     failed_requests: std::sync::atomic::AtomicU64,
     successful_publishes: std::sync::atomic::AtomicU64,
@@ -78,6 +81,9 @@ impl CameraWorker {
             last_detection: RwLock::new(None),
             last_inference: RwLock::new(None),
             last_inference_error: RwLock::new(None),
+            frames_processed: std::sync::atomic::AtomicU64::new(0),
+            current_fps: RwLock::new(0.0),
+            first_frame_at: RwLock::new(None),
             successful_requests: std::sync::atomic::AtomicU64::new(0),
             failed_requests: std::sync::atomic::AtomicU64::new(0),
             successful_publishes: std::sync::atomic::AtomicU64::new(0),
@@ -142,6 +148,16 @@ impl CameraWorker {
     /// Get the count of failed inference requests.
     pub fn failed_requests(&self) -> u64 {
         self.failed_requests.load(Ordering::Relaxed)
+    }
+
+    /// Get the total number of frames processed.
+    pub fn frames_processed(&self) -> u64 {
+        self.frames_processed.load(Ordering::Relaxed)
+    }
+
+    /// Get the current computed FPS.
+    pub async fn fps(&self) -> f64 {
+        *self.current_fps.read().await
     }
 
     /// Get a reference to the backend client, if configured.
@@ -264,6 +280,21 @@ impl CameraWorker {
         source: &str,
     ) -> Result<DetectionResponse, AIClientError> {
         let frame = self.simulate_frame_capture().await;
+
+        self.frames_processed.fetch_add(1, Ordering::Relaxed);
+        {
+            let mut first = self.first_frame_at.write().await;
+            if first.is_none() {
+                *first = Some(Instant::now());
+            }
+            let first_frame = first.expect("just set");
+            let elapsed = first_frame.elapsed().as_secs_f64();
+            if elapsed > 0.0 {
+                let count = self.frames_processed.load(Ordering::Relaxed) as f64;
+                let mut fps = self.current_fps.write().await;
+                *fps = count / elapsed;
+            }
+        }
 
         let response = self.ai_client.detect_frame(frame, source).await;
 

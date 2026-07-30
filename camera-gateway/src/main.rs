@@ -1,18 +1,20 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::extract::State as AxumState;
+use axum::extract::{Path, State as AxumState};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router};
 use prometheus::{Encoder, IntCounter, IntGauge, Registry, TextEncoder};
+use serde::Serialize;
 use tokio::net::TcpListener;
 use tracing::info;
 
 use camera_gateway::config::GatewayConfig;
 use camera_gateway::gateway::manager::GatewayManager;
 use camera_gateway::gateway::state::GatewayState;
+use camera_gateway::models::CameraStatus;
 use camera_gateway::services::health::{GatewayHealth, HealthResponse};
 
 #[derive(Clone)]
@@ -178,6 +180,71 @@ fn build_config_from_env() -> GatewayConfig {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct CameraStatusResponse {
+    id: uuid::Uuid,
+    name: String,
+    rtsp_url: String,
+    status: CameraStatus,
+    enabled: bool,
+    location: Option<String>,
+    fps: Option<i32>,
+    resolution: Option<String>,
+    last_seen_secs_ago: Option<u64>,
+    frames_processed: u64,
+    current_fps: f64,
+    successful_inferences: u64,
+    failed_inferences: u64,
+}
+
+async fn cameras_handler(AxumState(state): AxumState<HttpState>) -> Json<Vec<CameraStatusResponse>> {
+    let cameras = state.manager.state().cameras.read().await;
+    let mut list = Vec::with_capacity(cameras.len());
+    for (_, worker) in cameras.iter() {
+        let last_seen = worker.last_seen().await.map(|t| t.elapsed().as_secs());
+        list.push(CameraStatusResponse {
+            id: worker.camera_id(),
+            name: worker.camera_name().to_string(),
+            rtsp_url: worker.rtsp_url().to_string(),
+            status: worker.status().await,
+            enabled: worker.is_enabled(),
+            location: None,
+            fps: None,
+            resolution: None,
+            last_seen_secs_ago: last_seen,
+            frames_processed: worker.frames_processed(),
+            current_fps: worker.fps().await,
+            successful_inferences: worker.successful_requests(),
+            failed_inferences: worker.failed_requests(),
+        });
+    }
+    Json(list)
+}
+
+async fn camera_handler(
+    AxumState(state): AxumState<HttpState>,
+    Path(id): Path<uuid::Uuid>,
+) -> Result<Json<CameraStatusResponse>, StatusCode> {
+    let cameras = state.manager.state().cameras.read().await;
+    let worker = cameras.get(&id).ok_or(StatusCode::NOT_FOUND)?;
+    let last_seen = worker.last_seen().await.map(|t| t.elapsed().as_secs());
+    Ok(Json(CameraStatusResponse {
+        id: worker.camera_id(),
+        name: worker.camera_name().to_string(),
+        rtsp_url: worker.rtsp_url().to_string(),
+        status: worker.status().await,
+        enabled: worker.is_enabled(),
+        location: None,
+        fps: None,
+        resolution: None,
+        last_seen_secs_ago: last_seen,
+        frames_processed: worker.frames_processed(),
+        current_fps: worker.fps().await,
+        successful_inferences: worker.successful_requests(),
+        failed_inferences: worker.failed_requests(),
+    }))
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -204,6 +271,8 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health", get(health_handler))
         .route("/metrics", get(metrics_handler))
+        .route("/cameras", get(cameras_handler))
+        .route("/cameras/{id}", get(camera_handler))
         .with_state(http_state);
 
     let port = std::env::var("GATEWAY_PORT").unwrap_or_else(|_| "8082".to_string());
