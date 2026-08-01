@@ -120,6 +120,7 @@ services:
       GATEWAY_AI_SERVICE_URL: ${GATEWAY_AI_SERVICE_URL:-http://ai-service:8081}
       GATEWAY_BACKEND_URL: ${GATEWAY_BACKEND_URL:-http://backend:8080}
       GATEWAY_AUTH_TOKEN: ${GATEWAY_AUTH_TOKEN:-}
+      GATEWAY_CAMERAS: ${GATEWAY_CAMERAS:-}
     depends_on:
       backend:
         condition: service_healthy

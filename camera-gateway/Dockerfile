@@ -21,6 +21,7 @@ FROM debian:bookworm-slim AS runner
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --system gateway && useradd --system --gid gateway gateway

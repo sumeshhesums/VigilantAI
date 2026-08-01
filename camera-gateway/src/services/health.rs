@@ -129,7 +129,13 @@ mod tests {
     use crate::models::Camera;
 
     fn test_config() -> GatewayConfig {
-        GatewayConfig::default()
+        GatewayConfig {
+            rtsp: crate::config::RtspConfig {
+                simulated: true,
+                ..crate::config::RtspConfig::default()
+            },
+            ..GatewayConfig::default()
+        }
     }
 
     fn test_camera(name: &str, enabled: bool) -> Camera {

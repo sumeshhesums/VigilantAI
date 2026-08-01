@@ -48,7 +48,28 @@ pub struct CameraWorker {
     failed_publishes: std::sync::atomic::AtomicU64,
     last_publish: RwLock<Option<Instant>>,
     last_publish_error: RwLock<Option<BackendClientError>>,
+    reconnect_count: std::sync::atomic::AtomicU64,
 }
+
+/// Errors that can occur during a single inference cycle.
+#[derive(Debug)]
+pub enum WorkerError {
+    /// The camera stream could not produce a frame (connection/decode failure).
+    FrameCapture(RtspError),
+    /// The AI service failed to process the frame.
+    Inference(AIClientError),
+}
+
+impl fmt::Display for WorkerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WorkerError::FrameCapture(e) => write!(f, "frame capture failed: {e}"),
+            WorkerError::Inference(e) => write!(f, "inference failed: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for WorkerError {}
 
 impl CameraWorker {
     pub fn new(
@@ -90,6 +111,7 @@ impl CameraWorker {
             failed_publishes: std::sync::atomic::AtomicU64::new(0),
             last_publish: RwLock::new(None),
             last_publish_error: RwLock::new(None),
+            reconnect_count: std::sync::atomic::AtomicU64::new(0),
         })
     }
 
@@ -185,6 +207,26 @@ impl CameraWorker {
         self.last_publish_error.read().await.clone()
     }
 
+    /// Get the number of times this worker has restarted its connection.
+    pub fn reconnect_count(&self) -> u64 {
+        self.reconnect_count.load(Ordering::Relaxed)
+    }
+
+    /// Get the number of complete frames skipped because newer frames arrived.
+    pub fn frames_dropped(&self) -> u64 {
+        self.client.frames_dropped()
+    }
+
+    /// Get the number of decode/read failures encountered on the stream.
+    pub fn decode_errors(&self) -> u64 {
+        self.client.decode_errors()
+    }
+
+    /// Get the current stream bitrate in bits per second.
+    pub async fn bitrate_bps(&self) -> u64 {
+        self.client.bitrate_bps().await
+    }
+
     /// Start the worker — connect to the RTSP stream.
     ///
     /// Transitions: Offline → Connecting → Online (success) or Error (failure).
@@ -223,12 +265,12 @@ impl CameraWorker {
 
     /// Stop the worker — disconnect from the RTSP stream.
     pub async fn stop(&self) {
+        self.running.store(false, Ordering::Relaxed);
         self.client.disconnect().await;
         {
             let mut status = self.status.write().await;
             *status = CameraStatus::Stopped;
         }
-        self.running.store(false, Ordering::Relaxed);
 
         let mut last_err = self.last_error.write().await;
         *last_err = None;
@@ -236,6 +278,7 @@ impl CameraWorker {
 
     /// Restart the worker: disconnect then reconnect.
     pub async fn restart(&self) {
+        self.reconnect_count.fetch_add(1, Ordering::Relaxed);
         self.stop().await;
         self.start().await;
     }
@@ -265,21 +308,35 @@ impl CameraWorker {
         }
     }
 
-    /// Capture a simulated frame and run inference against the AI service.
+    /// Capture a frame from the RTSP stream and run inference against the AI
+    /// service.
     ///
-    /// This is a single inference cycle. Returns the detection response on
-    /// success, or an error. Frame capture is currently simulated (no RTSP
-    /// decoding).
+    /// This is a single inference cycle. Frames are decoded in real time by an
+    /// `ffmpeg` subprocess (see [`crate::stream::ffmpeg`]). Returns the
+    /// detection response on success, or a [`WorkerError`].
     ///
-    /// When a backend client is configured and auto_publish is enabled, each
-    /// detection is published as an incident to the backend API. Publishing
-    /// is blocking (waits for all publishes before returning) and failures
-    /// are non-blocking (logged and counted, worker continues).
+    /// A frame-capture failure marks the worker as failed so the supervisor
+    /// can reconnect the stream. When a backend client is configured and
+    /// auto_publish is enabled, each detection is published as an incident to
+    /// the backend API. Publishing is blocking (waits for all publishes before
+    /// returning) and failures are non-blocking (logged and counted, worker
+    /// continues).
     pub async fn capture_and_infer(
         &self,
         source: &str,
-    ) -> Result<DetectionResponse, AIClientError> {
-        let frame = self.simulate_frame_capture().await;
+    ) -> Result<DetectionResponse, WorkerError> {
+        let frame = match self.client.next_frame().await {
+            Ok(frame) => frame,
+            Err(e) => {
+                self.decoding_failure(e.clone()).await;
+                return Err(WorkerError::FrameCapture(e));
+            }
+        };
+
+        {
+            let mut last_seen = self.last_seen.write().await;
+            *last_seen = Some(Instant::now());
+        }
 
         self.frames_processed.fetch_add(1, Ordering::Relaxed);
         {
@@ -319,23 +376,45 @@ impl CameraWorker {
             }
         }
 
-        response
+        response.map_err(WorkerError::Inference)
     }
 
     /// Run the continuous inference loop.
     ///
     /// Performs `capture_and_infer` at the configured interval until the worker
-    /// is stopped. This should be spawned as a tokio task.
+    /// is stopped or the stream dies. A frame-capture failure ends the loop so
+    /// the supervisor can reconnect. This should be spawned as a tokio task.
     pub async fn run_inference_loop(&self, interval: Duration) {
         loop {
             if !self.running.load(Ordering::Relaxed) {
                 break;
             }
 
-            let _ = self.capture_and_infer(&self.camera_name.clone()).await;
+            match self.capture_and_infer(&self.camera_name.clone()).await {
+                Ok(_) => {}
+                Err(WorkerError::FrameCapture(_)) => break,
+                Err(WorkerError::Inference(_)) => {}
+            }
 
             tokio::time::sleep(interval).await;
         }
+    }
+
+    /// Mark the worker as failed after a frame-capture/decode error.
+    ///
+    /// No-op if the worker has already been stopped so a concurrent stop cannot
+    /// overwrite the `Stopped` status.
+    async fn decoding_failure(&self, e: RtspError) {
+        if !self.running.load(Ordering::Relaxed) {
+            return;
+        }
+        {
+            let mut status = self.status.write().await;
+            *status = CameraStatus::Error;
+        }
+        self.running.store(false, Ordering::Relaxed);
+        let mut last_err = self.last_error.write().await;
+        *last_err = Some(e);
     }
 
     /// Publish all detections from a DetectionResponse as incidents.
@@ -393,8 +472,7 @@ impl CameraWorker {
     /// Map a detection class name to an incident severity using the configured mapping.
     ///
     /// Falls back to Low for unmapped class names.
-    fn map_severity(&self, class_name: &str) -> IncidentSeverity {
-        self.backend_config
+    fn map_severity(&self, class_name: &str) -> IncidentSeverity {        self.backend_config
             .severity_mapping
             .get(class_name)
             .copied()
@@ -409,25 +487,6 @@ impl CameraWorker {
             x2: bbox.x2,
             y2: bbox.y2,
         })
-    }
-
-    /// Generate a simulated JPEG frame.
-    ///
-    /// In a future milestone this will decode from the RTSP stream.
-    async fn simulate_frame_capture(&self) -> bytes::Bytes {
-        // Minimal JPEG SOI marker + padding to simulate a real frame.
-        // SOI (FFD8) + APP0 (FFE0) marker with JFIF header
-        let mut data = vec![
-            0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00,
-            0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
-        ];
-        // Pad to a reasonable size to simulate a real frame
-        data.resize(1024, 0x00);
-        // Add EOI marker at the end
-        let len = data.len();
-        data[len - 2] = 0xFF;
-        data[len - 1] = 0xD9;
-        bytes::Bytes::from(data)
     }
 
     /// Get the current status.
@@ -473,6 +532,7 @@ mod tests {
     fn test_rtsp_config() -> RtspConfig {
         RtspConfig {
             connection_timeout: std::time::Duration::from_secs(5),
+            simulated: true,
         }
     }
 

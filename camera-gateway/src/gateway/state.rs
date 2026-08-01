@@ -80,6 +80,7 @@ mod tests {
     fn test_rtsp_config() -> RtspConfig {
         RtspConfig {
             connection_timeout: std::time::Duration::from_secs(5),
+            simulated: true,
         }
     }
 

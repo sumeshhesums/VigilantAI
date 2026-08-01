@@ -35,12 +35,17 @@ impl Default for AiConfig {
 pub struct RtspConfig {
     /// Timeout for a single connection attempt.
     pub connection_timeout: Duration,
+    /// When true, the RTSP connection is simulated and no ffmpeg subprocess is
+    /// spawned. Intended for tests and environments without an ffmpeg binary.
+    /// Production deployments must leave this disabled (the default).
+    pub simulated: bool,
 }
 
 impl Default for RtspConfig {
     fn default() -> Self {
         Self {
             connection_timeout: Duration::from_secs(10),
+            simulated: false,
         }
     }
 }
@@ -183,6 +188,7 @@ mod tests {
     fn test_rtsp_config_defaults() {
         let config = RtspConfig::default();
         assert_eq!(config.connection_timeout, Duration::from_secs(10));
+        assert!(!config.simulated);
     }
 
     #[test]

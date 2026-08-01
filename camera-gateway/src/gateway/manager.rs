@@ -258,7 +258,13 @@ mod tests {
     use super::*;
 
     fn test_config() -> GatewayConfig {
-        GatewayConfig::default()
+        GatewayConfig {
+            rtsp: crate::config::RtspConfig {
+                simulated: true,
+                ..crate::config::RtspConfig::default()
+            },
+            ..GatewayConfig::default()
+        }
     }
 
     fn test_camera(name: &str) -> Camera {
