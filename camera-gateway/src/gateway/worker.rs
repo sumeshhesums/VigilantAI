@@ -2,6 +2,7 @@ use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
+use bytes::Bytes;
 use tokio::sync::RwLock;
 
 use crate::ai::client::AIClient;
@@ -37,6 +38,7 @@ pub struct CameraWorker {
     enabled: AtomicBool,
     running: AtomicBool,
     last_detection: RwLock<Option<DetectionResponse>>,
+    last_frame: RwLock<Option<Bytes>>,
     last_inference: RwLock<Option<Instant>>,
     last_inference_error: RwLock<Option<AIClientError>>,
     frames_processed: std::sync::atomic::AtomicU64,
@@ -46,6 +48,10 @@ pub struct CameraWorker {
     failed_requests: std::sync::atomic::AtomicU64,
     successful_publishes: std::sync::atomic::AtomicU64,
     failed_publishes: std::sync::atomic::AtomicU64,
+    evidence_uploaded: std::sync::atomic::AtomicU64,
+    evidence_upload_failures: std::sync::atomic::AtomicU64,
+    notifications_sent: std::sync::atomic::AtomicU64,
+    notification_failures: std::sync::atomic::AtomicU64,
     last_publish: RwLock<Option<Instant>>,
     last_publish_error: RwLock<Option<BackendClientError>>,
     reconnect_count: std::sync::atomic::AtomicU64,
@@ -100,6 +106,7 @@ impl CameraWorker {
             enabled: AtomicBool::new(camera.enabled),
             running: AtomicBool::new(false),
             last_detection: RwLock::new(None),
+            last_frame: RwLock::new(None),
             last_inference: RwLock::new(None),
             last_inference_error: RwLock::new(None),
             frames_processed: std::sync::atomic::AtomicU64::new(0),
@@ -109,6 +116,10 @@ impl CameraWorker {
             failed_requests: std::sync::atomic::AtomicU64::new(0),
             successful_publishes: std::sync::atomic::AtomicU64::new(0),
             failed_publishes: std::sync::atomic::AtomicU64::new(0),
+            evidence_uploaded: std::sync::atomic::AtomicU64::new(0),
+            evidence_upload_failures: std::sync::atomic::AtomicU64::new(0),
+            notifications_sent: std::sync::atomic::AtomicU64::new(0),
+            notification_failures: std::sync::atomic::AtomicU64::new(0),
             last_publish: RwLock::new(None),
             last_publish_error: RwLock::new(None),
             reconnect_count: std::sync::atomic::AtomicU64::new(0),
@@ -205,6 +216,74 @@ impl CameraWorker {
     /// Get the last backend publish error, if any.
     pub async fn last_publish_error(&self) -> Option<BackendClientError> {
         self.last_publish_error.read().await.clone()
+    }
+
+    /// Get the count of successful evidence uploads.
+    pub fn successful_evidence_uploads(&self) -> u64 {
+        self.evidence_uploaded.load(Ordering::Relaxed)
+    }
+
+    /// Get the count of failed evidence uploads.
+    pub fn failed_evidence_uploads(&self) -> u64 {
+        self.evidence_upload_failures.load(Ordering::Relaxed)
+    }
+
+    /// Get the count of successful notification sends.
+    pub fn successful_notifications(&self) -> u64 {
+        self.notifications_sent.load(Ordering::Relaxed)
+    }
+
+    /// Get the count of failed notification sends.
+    pub fn failed_notifications(&self) -> u64 {
+        self.notification_failures.load(Ordering::Relaxed)
+    }
+
+    /// Get the inference latency (ms) of the most recent detection response.
+    pub async fn last_inference_latency_ms(&self) -> Option<f64> {
+        self.last_detection
+            .read()
+            .await
+            .as_ref()
+            .map(|d| d.inference_time_ms)
+    }
+
+    /// Get the detection count of the most recent detection response.
+    pub async fn last_detection_count(&self) -> i64 {
+        self.last_detection
+            .read()
+            .await
+            .as_ref()
+            .map(|d| d.detection_count)
+            .unwrap_or(0)
+    }
+
+    /// Get the highest confidence across the most recent detections.
+    pub async fn last_detection_confidence(&self) -> f64 {
+        self.last_detection
+            .read()
+            .await
+            .as_ref()
+            .map(|d| {
+                d.detections
+                    .iter()
+                    .map(|det| det.confidence)
+                    .fold(0.0f64, f64::max)
+            })
+            .unwrap_or(0.0)
+    }
+
+    /// Whether a model has produced a detection response (model status).
+    pub async fn model_ready(&self) -> bool {
+        self.last_detection.read().await.is_some()
+    }
+
+    /// The model name of the most recent detection response, if any.
+    pub async fn model_name(&self) -> Option<String> {
+        self.last_detection
+            .read()
+            .await
+            .as_ref()
+            .map(|d| d.metadata.model_name.clone())
     }
 
     /// Get the number of times this worker has restarted its connection.
@@ -334,6 +413,11 @@ impl CameraWorker {
         };
 
         {
+            let mut last_frame = self.last_frame.write().await;
+            *last_frame = Some(frame.clone());
+        }
+
+        {
             let mut last_seen = self.last_seen.write().await;
             *last_seen = Some(Instant::now());
         }
@@ -420,7 +504,9 @@ impl CameraWorker {
     /// Publish all detections from a DetectionResponse as incidents.
     ///
     /// Blocks until all publishes complete. Failures are logged and counted
-    /// but do not prevent other detections from being published.
+    /// but do not prevent other detections from being published. After a
+    /// successful incident creation the source frame is uploaded as evidence
+    /// and a notification is sent, both via the backend API.
     async fn publish_detections(&self, response: &DetectionResponse) {
         let Some(client) = &self.backend_client else {
             return;
@@ -447,12 +533,49 @@ impl CameraWorker {
             };
 
             match client.publish_incident(&request).await {
-                Ok(_) => {
+                Ok(incident) => {
                     self.successful_publishes.fetch_add(1, Ordering::Relaxed);
                     let mut last_pub = self.last_publish.write().await;
                     *last_pub = Some(Instant::now());
                     let mut last_err = self.last_publish_error.write().await;
                     *last_err = None;
+
+                    if self.backend_config.publish_evidence {
+                        match self
+                            .publish_evidence_for_incident(client, incident.id)
+                            .await
+                        {
+                            Ok(_) => {
+                                self.evidence_uploaded.fetch_add(1, Ordering::Relaxed);
+                            }
+                            Err(e) => {
+                                tracing::warn!(
+                                    camera_id = %self.camera_id,
+                                    incident_id = %incident.id,
+                                    error = %e,
+                                    "failed to upload evidence"
+                                );
+                                self.evidence_upload_failures.fetch_add(1, Ordering::Relaxed);
+                            }
+                        }
+                    }
+
+                    if self.backend_config.publish_notifications {
+                        match client.send_notification(incident.id, "").await {
+                            Ok(_) => {
+                                self.notifications_sent.fetch_add(1, Ordering::Relaxed);
+                            }
+                            Err(e) => {
+                                tracing::warn!(
+                                    camera_id = %self.camera_id,
+                                    incident_id = %incident.id,
+                                    error = %e,
+                                    "failed to send notification"
+                                );
+                                self.notification_failures.fetch_add(1, Ordering::Relaxed);
+                            }
+                        }
+                    }
                 }
                 Err(e) => {
                     tracing::warn!(
@@ -467,6 +590,23 @@ impl CameraWorker {
                 }
             }
         }
+    }
+
+    /// Upload the most recently captured frame as evidence for an incident.
+    async fn publish_evidence_for_incident(
+        &self,
+        client: &BackendClient,
+        incident_id: uuid::Uuid,
+    ) -> Result<(), BackendClientError> {
+        let frame = self.last_frame.read().await.clone();
+        let Some(frame) = frame else {
+            return Ok(());
+        };
+        let file_name = format!("frame-{incident_id}.jpg");
+        client
+            .upload_evidence(incident_id, frame, &file_name, "image/jpeg")
+            .await
+            .map(|_| ())
     }
 
     /// Map a detection class name to an incident severity using the configured mapping.
@@ -521,6 +661,8 @@ impl fmt::Debug for CameraWorker {
             .field("failed_requests", &self.failed_requests())
             .field("successful_publishes", &self.successful_publishes())
             .field("failed_publishes", &self.failed_publishes())
+            .field("evidence_uploaded", &self.successful_evidence_uploads())
+            .field("notifications_sent", &self.successful_notifications())
             .finish_non_exhaustive()
     }
 }

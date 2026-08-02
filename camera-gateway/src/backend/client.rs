@@ -1,11 +1,15 @@
 use std::time::Duration;
 
+use bytes::Bytes;
 use reqwest::Client;
+use uuid::Uuid;
 
 use crate::config::BackendConfig;
 
 use super::error::BackendClientError;
-use super::models::{IncidentRequest, IncidentResponse};
+use super::models::{
+    EvidenceResponse, IncidentRequest, IncidentResponse, NotificationRequest, NotificationResponse,
+};
 
 #[derive(Debug, Clone)]
 pub struct BackendClient {
@@ -121,6 +125,123 @@ impl BackendClient {
             })
         }
     }
+
+    /// Upload a JPEG frame as evidence for an incident.
+    ///
+    /// Sends a multipart POST to `POST /api/v1/incidents/{id}/evidence`. The
+    /// backend stores the image and deduplicates by SHA-256 within the incident.
+    pub async fn upload_evidence(
+        &self,
+        incident_id: Uuid,
+        image: Bytes,
+        file_name: &str,
+        content_type: &str,
+    ) -> Result<EvidenceResponse, BackendClientError> {
+        let url = format!(
+            "{}/api/v1/incidents/{incident_id}/evidence",
+            self.base_url
+        );
+
+        let part = reqwest::multipart::Part::bytes(image.to_vec())
+            .file_name(file_name.to_string())
+            .mime_str(content_type)
+            .map_err(|e| BackendClientError::Serialization {
+                detail: e.to_string(),
+            })?;
+
+        let form = reqwest::multipart::Form::new()
+            .part("file", part)
+            .text("content_type", content_type.to_string());
+
+        let resp = self
+            .client
+            .post(&url)
+            .timeout(self.timeout)
+            .bearer_auth(&self.auth_token)
+            .multipart(form)
+            .send()
+            .await
+            .map_err(|e| self.map_transport_error(e))?;
+
+        let status = resp.status();
+        if status.is_success() {
+            let body = resp.text().await.map_err(BackendClientError::from)?;
+            serde_json::from_str::<EvidenceResponse>(&body).map_err(|e| {
+                BackendClientError::InvalidResponse {
+                    detail: format!("failed to parse EvidenceResponse: {e}"),
+                }
+            })
+        } else {
+            Err(self.map_status_error(resp).await)
+        }
+    }
+
+    /// Send a notification for an incident.
+    ///
+    /// Sends `POST /api/v1/notifications/send`. An empty recipient makes the
+    /// backend use the default webhook URL configured on its side.
+    pub async fn send_notification(
+        &self,
+        incident_id: Uuid,
+        recipient: &str,
+    ) -> Result<NotificationResponse, BackendClientError> {
+        let url = format!("{}/api/v1/notifications/send", self.base_url);
+
+        let request = NotificationRequest {
+            incident_id,
+            channel: super::models::NotificationChannel::Webhook,
+            recipient: recipient.to_string(),
+        };
+
+        let resp = self
+            .client
+            .post(&url)
+            .timeout(self.timeout)
+            .bearer_auth(&self.auth_token)
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| self.map_transport_error(e))?;
+
+        let status = resp.status();
+        if status.is_success() {
+            let body = resp.text().await.map_err(BackendClientError::from)?;
+            serde_json::from_str::<NotificationResponse>(&body).map_err(|e| {
+                BackendClientError::InvalidResponse {
+                    detail: format!("failed to parse NotificationResponse: {e}"),
+                }
+            })
+        } else {
+            Err(self.map_status_error(resp).await)
+        }
+    }
+
+    /// Map a transport (reqwest) error into a `BackendClientError`.
+    fn map_transport_error(&self, e: reqwest::Error) -> BackendClientError {
+        if e.is_connect() {
+            BackendClientError::Offline {
+                url: self.base_url.clone(),
+            }
+        } else if e.is_timeout() {
+            BackendClientError::Timeout {
+                url: self.base_url.clone(),
+                timeout_ms: self.timeout.as_millis() as u64,
+            }
+        } else {
+            BackendClientError::from(e)
+        }
+    }
+
+    /// Map a non-success HTTP status into a `BackendClientError`.
+    async fn map_status_error(&self, resp: reqwest::Response) -> BackendClientError {
+        let status = resp.status().as_u16();
+        let body = resp.text().await.unwrap_or_default();
+        match status {
+            401 => BackendClientError::Unauthorized { detail: body },
+            409 => BackendClientError::Conflict { detail: body },
+            _ => BackendClientError::HttpError { status, body },
+        }
+    }
 }
 
 #[cfg(test)]
@@ -136,6 +257,8 @@ mod tests {
             auth_token: "test-token".to_string(),
             auto_publish: true,
             publish_retries: 3,
+            publish_evidence: true,
+            publish_notifications: true,
             severity_mapping: std::collections::HashMap::new(),
         }
     }
@@ -331,6 +454,8 @@ mod tests {
             auth_token: "test-token".to_string(),
             auto_publish: true,
             publish_retries: 3,
+            publish_evidence: true,
+            publish_notifications: true,
             severity_mapping: std::collections::HashMap::new(),
         };
         let client = BackendClient::new(config);
@@ -380,5 +505,191 @@ mod tests {
     async fn test_base_url() {
         let client = BackendClient::new(test_config("http://backend:8080"));
         assert_eq!(client.base_url(), "http://backend:8080");
+    }
+
+    fn sample_evidence_json() -> &'static str {
+        r#"{
+            "id": "550e8400-e29b-41d4-a716-446655440002",
+            "incident_id": "550e8400-e29b-41d4-a716-446655440001",
+            "file_name": "frame.jpg",
+            "content_type": "image/jpeg",
+            "file_size": 1024,
+            "sha256": "abc123",
+            "width": 640,
+            "height": 480,
+            "created_at": "2024-01-01T00:00:00Z"
+        }"#
+    }
+
+    fn sample_notification_json() -> &'static str {
+        r#"{
+            "id": "550e8400-e29b-41d4-a716-446655440003",
+            "incident_id": "550e8400-e29b-41d4-a716-446655440001",
+            "channel": "webhook",
+            "recipient": "",
+            "status": "sent",
+            "attempts": 1,
+            "response_code": 200,
+            "error_message": null,
+            "created_at": "2024-01-01T00:00:00Z",
+            "sent_at": "2024-01-01T00:00:00Z"
+        }"#
+    }
+
+    #[tokio::test]
+    async fn test_upload_evidence_success() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(POST)
+                .path("/api/v1/incidents/550e8400-e29b-41d4-a716-446655440001/evidence")
+                .header("Authorization", "Bearer test-token")
+                .body_contains("frame.jpg");
+            then.status(201)
+                .header("content-type", "application/json")
+                .body(sample_evidence_json());
+        });
+
+        let client = BackendClient::new(test_config(&server.base_url()));
+        let incident_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let img = bytes::Bytes::from_static(&[0xFF, 0xD8, 0xFF, 0xD9]);
+        let resp = client
+            .upload_evidence(incident_id, img, "frame.jpg", "image/jpeg")
+            .await
+            .unwrap();
+        assert_eq!(resp.sha256, "abc123");
+        assert_eq!(resp.width, Some(640));
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_upload_evidence_offline() {
+        let client = BackendClient::new(test_config("http://127.0.0.1:19991"));
+        let incident_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let img = bytes::Bytes::from_static(&[0xFF, 0xD8, 0xFF, 0xD9]);
+        let result = client
+            .upload_evidence(incident_id, img, "frame.jpg", "image/jpeg")
+            .await;
+        assert!(matches!(
+            result.unwrap_err(),
+            BackendClientError::Offline { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_upload_evidence_unauthorized() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(POST)
+                .path("/api/v1/incidents/550e8400-e29b-41d4-a716-446655440001/evidence");
+            then.status(401).body(r#"{"error": "unauthorized", "status": 401}"#);
+        });
+
+        let client = BackendClient::new(test_config(&server.base_url()));
+        let incident_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let img = bytes::Bytes::from_static(&[0xFF, 0xD8, 0xFF, 0xD9]);
+        let result = client
+            .upload_evidence(incident_id, img, "frame.jpg", "image/jpeg")
+            .await;
+        assert!(matches!(
+            result.unwrap_err(),
+            BackendClientError::Unauthorized { .. }
+        ));
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_upload_evidence_conflict() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(POST)
+                .path("/api/v1/incidents/550e8400-e29b-41d4-a716-446655440001/evidence");
+            then.status(409).body("unsupported content type");
+        });
+
+        let client = BackendClient::new(test_config(&server.base_url()));
+        let incident_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let img = bytes::Bytes::from_static(&[0xFF, 0xD8, 0xFF, 0xD9]);
+        let result = client
+            .upload_evidence(incident_id, img, "frame.jpg", "image/jpeg")
+            .await;
+        assert!(matches!(
+            result.unwrap_err(),
+            BackendClientError::Conflict { .. }
+        ));
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_send_notification_success() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(POST)
+                .path("/api/v1/notifications/send")
+                .header("Authorization", "Bearer test-token")
+                .json_body(serde_json::json!({
+                    "incident_id": "550e8400-e29b-41d4-a716-446655440001",
+                    "channel": "webhook",
+                    "recipient": ""
+                }));
+            then.status(201)
+                .header("content-type", "application/json")
+                .body(sample_notification_json());
+        });
+
+        let client = BackendClient::new(test_config(&server.base_url()));
+        let incident_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let resp = client.send_notification(incident_id, "").await.unwrap();
+        assert_eq!(resp.status, "sent");
+        assert_eq!(resp.channel, super::models::NotificationChannel::Webhook);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_send_notification_offline() {
+        let client = BackendClient::new(test_config("http://127.0.0.1:19990"));
+        let incident_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let result = client.send_notification(incident_id, "").await;
+        assert!(matches!(
+            result.unwrap_err(),
+            BackendClientError::Offline { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_send_notification_unauthorized() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(POST).path("/api/v1/notifications/send");
+            then.status(401).body(r#"{"error": "unauthorized", "status": 401}"#);
+        });
+
+        let client = BackendClient::new(test_config(&server.base_url()));
+        let incident_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let result = client.send_notification(incident_id, "").await;
+        assert!(matches!(
+            result.unwrap_err(),
+            BackendClientError::Unauthorized { .. }
+        ));
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_send_notification_invalid_json_response() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(POST).path("/api/v1/notifications/send");
+            then.status(201)
+                .header("content-type", "application/json")
+                .body("not json");
+        });
+
+        let client = BackendClient::new(test_config(&server.base_url()));
+        let incident_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440001").unwrap();
+        let result = client.send_notification(incident_id, "").await;
+        assert!(matches!(
+            result.unwrap_err(),
+            BackendClientError::InvalidResponse { .. }
+        ));
+        mock.assert();
     }
 }

@@ -30,10 +30,19 @@ struct GatewayMetrics {
     frames_dropped_total: IntGauge,
     decode_errors_total: IntGauge,
     current_bitrate_bps: IntGauge,
+    frame_rate: prometheus::Gauge,
     ai_requests_total: IntGauge,
     ai_failures_total: IntGauge,
+    inference_latency_ms: prometheus::Gauge,
+    detections_total: IntGauge,
+    detection_confidence: prometheus::Gauge,
+    model_ready: IntGauge,
     backend_publishes_total: IntGauge,
     backend_publish_failures_total: IntGauge,
+    evidence_uploaded_total: IntGauge,
+    evidence_upload_failures_total: IntGauge,
+    notifications_sent_total: IntGauge,
+    notification_failures_total: IntGauge,
 }
 
 impl GatewayMetrics {
@@ -79,6 +88,11 @@ impl GatewayMetrics {
             "Aggregate current stream bitrate in bits per second"
         ))
         .unwrap();
+        let frame_rate = prometheus::Gauge::with_opts(prometheus::opts!(
+            "vigilantai_gateway_frame_rate",
+            "Aggregate frame processing rate in frames per second"
+        ))
+        .unwrap();
         let ai_requests_total = IntGauge::with_opts(prometheus::opts!(
             "vigilantai_gateway_ai_requests_total",
             "Total AI inference requests"
@@ -89,6 +103,26 @@ impl GatewayMetrics {
             "Total AI inference failures"
         ))
         .unwrap();
+        let inference_latency_ms = prometheus::Gauge::with_opts(prometheus::opts!(
+            "vigilantai_gateway_inference_latency_ms",
+            "Inference latency of the most recent detection response in milliseconds"
+        ))
+        .unwrap();
+        let detections_total = IntGauge::with_opts(prometheus::opts!(
+            "vigilantai_gateway_detections_total",
+            "Detection count of the most recent detection response"
+        ))
+        .unwrap();
+        let detection_confidence = prometheus::Gauge::with_opts(prometheus::opts!(
+            "vigilantai_gateway_detection_confidence",
+            "Highest confidence across the most recent detections"
+        ))
+        .unwrap();
+        let model_ready = IntGauge::with_opts(prometheus::opts!(
+            "vigilantai_gateway_model_ready",
+            "Whether the AI model has produced a detection response (1=ready, 0=not ready)"
+        ))
+        .unwrap();
         let backend_publishes_total = IntGauge::with_opts(prometheus::opts!(
             "vigilantai_gateway_backend_publishes_total",
             "Total backend publish attempts"
@@ -97,6 +131,26 @@ impl GatewayMetrics {
         let backend_publish_failures_total = IntGauge::with_opts(prometheus::opts!(
             "vigilantai_gateway_backend_publish_failures_total",
             "Total backend publish failures"
+        ))
+        .unwrap();
+        let evidence_uploaded_total = IntGauge::with_opts(prometheus::opts!(
+            "vigilantai_gateway_evidence_uploaded_total",
+            "Total evidence uploads"
+        ))
+        .unwrap();
+        let evidence_upload_failures_total = IntGauge::with_opts(prometheus::opts!(
+            "vigilantai_gateway_evidence_upload_failures_total",
+            "Total evidence upload failures"
+        ))
+        .unwrap();
+        let notifications_sent_total = IntGauge::with_opts(prometheus::opts!(
+            "vigilantai_gateway_notifications_sent_total",
+            "Total notifications sent"
+        ))
+        .unwrap();
+        let notification_failures_total = IntGauge::with_opts(prometheus::opts!(
+            "vigilantai_gateway_notification_failures_total",
+            "Total notification failures"
         ))
         .unwrap();
 
@@ -122,6 +176,7 @@ impl GatewayMetrics {
         registry
             .register(Box::new(current_bitrate_bps.clone()))
             .unwrap();
+        registry.register(Box::new(frame_rate.clone())).unwrap();
         registry
             .register(Box::new(ai_requests_total.clone()))
             .unwrap();
@@ -129,10 +184,32 @@ impl GatewayMetrics {
             .register(Box::new(ai_failures_total.clone()))
             .unwrap();
         registry
+            .register(Box::new(inference_latency_ms.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(detections_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(detection_confidence.clone()))
+            .unwrap();
+        registry.register(Box::new(model_ready.clone())).unwrap();
+        registry
             .register(Box::new(backend_publishes_total.clone()))
             .unwrap();
         registry
             .register(Box::new(backend_publish_failures_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(evidence_uploaded_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(evidence_upload_failures_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(notifications_sent_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(notification_failures_total.clone()))
             .unwrap();
 
         Self {
@@ -145,10 +222,19 @@ impl GatewayMetrics {
             frames_dropped_total,
             decode_errors_total,
             current_bitrate_bps,
+            frame_rate,
             ai_requests_total,
             ai_failures_total,
+            inference_latency_ms,
+            detections_total,
+            detection_confidence,
+            model_ready,
             backend_publishes_total,
             backend_publish_failures_total,
+            evidence_uploaded_total,
+            evidence_upload_failures_total,
+            notifications_sent_total,
+            notification_failures_total,
         }
     }
 
@@ -164,10 +250,19 @@ impl GatewayMetrics {
         let mut decode_errors_total: i64 = 0;
         let mut bitrate_total: i64 = 0;
         let mut reconnect_total: i64 = 0;
+        let mut frame_rate_total: f64 = 0.0;
         let mut ai_ok: i64 = 0;
         let mut ai_fail: i64 = 0;
         let mut pub_ok: i64 = 0;
         let mut pub_fail: i64 = 0;
+        let mut evidence_ok: i64 = 0;
+        let mut evidence_fail: i64 = 0;
+        let mut notif_ok: i64 = 0;
+        let mut notif_fail: i64 = 0;
+        let mut detections: i64 = 0;
+        let mut confidence: f64 = 0.0;
+        let mut latency_ms: f64 = 0.0;
+        let mut model_ready = 0i64;
         for worker in cameras.values() {
             match worker.status().await {
                 camera_gateway::models::CameraStatus::Online => online += 1,
@@ -178,10 +273,21 @@ impl GatewayMetrics {
             decode_errors_total += worker.decode_errors() as i64;
             bitrate_total += worker.bitrate_bps().await as i64;
             reconnect_total += worker.reconnect_count() as i64;
+            frame_rate_total += worker.fps().await;
             ai_ok += worker.successful_requests() as i64;
             ai_fail += worker.failed_requests() as i64;
             pub_ok += worker.successful_publishes() as i64;
             pub_fail += worker.failed_publishes() as i64;
+            evidence_ok += worker.successful_evidence_uploads() as i64;
+            evidence_fail += worker.failed_evidence_uploads() as i64;
+            notif_ok += worker.successful_notifications() as i64;
+            notif_fail += worker.failed_notifications() as i64;
+            detections += worker.last_detection_count().await;
+            confidence = confidence.max(worker.last_detection_confidence().await);
+            latency_ms = latency_ms.max(worker.last_inference_latency_ms().await.unwrap_or(0.0));
+            if worker.model_ready().await {
+                model_ready = 1;
+            }
         }
         self.cameras_online.set(online);
         self.cameras_offline.set(offline);
@@ -190,10 +296,19 @@ impl GatewayMetrics {
         self.decode_errors_total.set(decode_errors_total);
         self.current_bitrate_bps.set(bitrate_total);
         self.reconnect_attempts_total.set(reconnect_total);
+        self.frame_rate.set(frame_rate_total);
         self.ai_requests_total.set(ai_ok);
         self.ai_failures_total.set(ai_fail);
+        self.inference_latency_ms.set(latency_ms);
+        self.detections_total.set(detections);
+        self.detection_confidence.set(confidence);
+        self.model_ready.set(model_ready);
         self.backend_publishes_total.set(pub_ok);
         self.backend_publish_failures_total.set(pub_fail);
+        self.evidence_uploaded_total.set(evidence_ok);
+        self.evidence_upload_failures_total.set(evidence_fail);
+        self.notifications_sent_total.set(notif_ok);
+        self.notification_failures_total.set(notif_fail);
     }
 
     fn encode(&self) -> String {
@@ -235,6 +350,12 @@ fn build_config_from_env() -> GatewayConfig {
     let backend_url =
         std::env::var("GATEWAY_BACKEND_URL").unwrap_or_else(|_| "http://backend:8080".to_string());
     let auth_token = std::env::var("GATEWAY_AUTH_TOKEN").unwrap_or_default();
+    let publish_evidence = std::env::var("GATEWAY_PUBLISH_EVIDENCE")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(true);
+    let publish_notifications = std::env::var("GATEWAY_PUBLISH_NOTIFICATIONS")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(true);
 
     GatewayConfig {
         ai: camera_gateway::config::AiConfig {
@@ -244,6 +365,8 @@ fn build_config_from_env() -> GatewayConfig {
         backend: camera_gateway::config::BackendConfig {
             url: backend_url,
             auth_token,
+            publish_evidence,
+            publish_notifications,
             ..Default::default()
         },
         ..Default::default()

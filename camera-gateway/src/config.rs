@@ -95,6 +95,11 @@ pub struct BackendConfig {
     pub auto_publish: bool,
     /// Maximum number of retry attempts for transient failures.
     pub publish_retries: u32,
+    /// Whether to upload the source frame as evidence after a successful
+    /// incident publish.
+    pub publish_evidence: bool,
+    /// Whether to create a notification after a successful incident publish.
+    pub publish_notifications: bool,
     /// Mapping from detection class_name to incident severity.
     pub severity_mapping: HashMap<String, IncidentSeverity>,
 }
@@ -115,6 +120,8 @@ impl Default for BackendConfig {
             auth_token: String::new(),
             auto_publish: true,
             publish_retries: 3,
+            publish_evidence: true,
+            publish_notifications: true,
             severity_mapping,
         }
     }
@@ -215,6 +222,8 @@ mod tests {
         assert!(config.auth_token.is_empty());
         assert!(config.auto_publish);
         assert_eq!(config.publish_retries, 3);
+        assert!(config.publish_evidence);
+        assert!(config.publish_notifications);
     }
 
     #[test]

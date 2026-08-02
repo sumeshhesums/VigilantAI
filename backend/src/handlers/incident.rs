@@ -38,7 +38,7 @@ fn incident_response(incident: Incident) -> IncidentResponse {
 
 // ---------------------------------------------------------------------------
 // POST /api/v1/incidents
-// Allowed: SecurityAdmin, SystemAdmin
+// Allowed: SecurityAdmin, SystemAdmin, ApiIntegration
 // ---------------------------------------------------------------------------
 pub async fn create_incident(
     AuthUser { .. }: AuthUser,
@@ -46,7 +46,10 @@ pub async fn create_incident(
     State(state): State<AppState>,
     Json(body): Json<CreateIncidentRequest>,
 ) -> Result<(StatusCode, Json<IncidentResponse>), AppError> {
-    require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin])?;
+    require_any_role(
+        &roles,
+        &[Role::SecurityAdmin, Role::SystemAdmin, Role::ApiIntegration],
+    )?;
 
     let repo = PostgresIncidentRepository;
     let service = IncidentService::new(repo);

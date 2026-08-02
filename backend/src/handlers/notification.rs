@@ -12,6 +12,7 @@ use crate::models::{Notification, NotificationChannel};
 use crate::rbac::guards::require_any_role;
 use crate::rbac::roles::Role;
 use crate::repository::notification_repository::PostgresNotificationRepository;
+use crate::services::notifiers::WebhookNotifier;
 use crate::services::NotificationService;
 use crate::state::AppState;
 
@@ -34,12 +35,23 @@ fn notification_response(notification: Notification) -> NotificationResponse {
 
 fn make_service(state: &AppState) -> NotificationService<PostgresNotificationRepository> {
     let repo = PostgresNotificationRepository;
-    NotificationService::new(repo, state.config.notification.clone())
+    let config = state.config.notification.clone();
+    let mut service = NotificationService::new(repo, config.clone());
+    if !config.webhook_url.is_empty() {
+        service.register_notifier(
+            NotificationChannel::Webhook,
+            std::sync::Arc::new(WebhookNotifier::new(
+                config.webhook_url,
+                config.webhook_timeout_secs,
+            )),
+        );
+    }
+    service
 }
 
 // ---------------------------------------------------------------------------
 // POST /api/v1/notifications/send
-// Allowed: SecurityAdmin, SystemAdmin
+// Allowed: SecurityAdmin, SystemAdmin, ApiIntegration
 // ---------------------------------------------------------------------------
 pub async fn send_notification(
     AuthUser { .. }: AuthUser,
@@ -47,7 +59,10 @@ pub async fn send_notification(
     State(state): State<AppState>,
     Json(body): Json<SendNotificationRequest>,
 ) -> Result<(StatusCode, Json<NotificationResponse>), AppError> {
-    require_any_role(&roles, &[Role::SecurityAdmin, Role::SystemAdmin])?;
+    require_any_role(
+        &roles,
+        &[Role::SecurityAdmin, Role::SystemAdmin, Role::ApiIntegration],
+    )?;
 
     let service = make_service(&state);
 

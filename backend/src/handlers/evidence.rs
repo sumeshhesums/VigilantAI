@@ -36,7 +36,7 @@ fn make_service(
 
 // ---------------------------------------------------------------------------
 // POST /api/v1/incidents/:id/evidence
-// Allowed: Operator, SecurityAnalyst, SecurityAdmin, SystemAdmin
+// Allowed: Operator, SecurityAnalyst, SecurityAdmin, SystemAdmin, ApiIntegration
 // ---------------------------------------------------------------------------
 pub async fn upload_evidence(
     AuthUser { .. }: AuthUser,
@@ -52,6 +52,7 @@ pub async fn upload_evidence(
             Role::SecurityAnalyst,
             Role::SecurityAdmin,
             Role::SystemAdmin,
+            Role::ApiIntegration,
         ],
     )?;
 

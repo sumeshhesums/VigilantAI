@@ -81,6 +81,131 @@ pub struct ErrorResponse {
     pub status: u16,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct NotificationRequest {
+    pub incident_id: Uuid,
+    pub channel: NotificationChannel,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub recipient: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NotificationChannel {
+    Webhook,
+    Email,
+}
+
+impl std::fmt::Display for NotificationChannel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            NotificationChannel::Webhook => "webhook",
+            NotificationChannel::Email => "email",
+        };
+        write!(f, "{s}")
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct NotificationResponse {
+    pub id: Uuid,
+    pub incident_id: Uuid,
+    pub channel: NotificationChannel,
+    pub recipient: String,
+    pub status: String,
+    pub attempts: i32,
+    pub response_code: Option<i32>,
+    pub error_message: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub sent_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EvidenceResponse {
+    pub id: Uuid,
+    pub incident_id: Uuid,
+    pub file_name: String,
+    pub content_type: String,
+    pub file_size: i64,
+    pub sha256: String,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_notification_channel_display() {
+        assert_eq!(NotificationChannel::Webhook.to_string(), "webhook");
+        assert_eq!(NotificationChannel::Email.to_string(), "email");
+    }
+
+    #[test]
+    fn test_notification_request_serialization() {
+        let req = NotificationRequest {
+            incident_id: Uuid::nil(),
+            channel: NotificationChannel::Webhook,
+            recipient: String::new(),
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("\"incident_id\""));
+        assert!(json.contains("\"channel\":\"webhook\""));
+        assert!(!json.contains("\"recipient\""));
+    }
+
+    #[test]
+    fn test_notification_request_with_recipient() {
+        let req = NotificationRequest {
+            incident_id: Uuid::nil(),
+            channel: NotificationChannel::Email,
+            recipient: "ops@example.com".to_string(),
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("\"recipient\":\"ops@example.com\""));
+    }
+
+    #[test]
+    fn test_notification_response_deserialization() {
+        let json = r#"{
+            "id": "550e8400-e29b-41d4-a716-446655440000",
+            "incident_id": "550e8400-e29b-41d4-a716-446655440001",
+            "channel": "webhook",
+            "recipient": "https://example.com/hook",
+            "status": "sent",
+            "attempts": 1,
+            "response_code": 200,
+            "error_message": null,
+            "created_at": "2024-01-01T00:00:00Z",
+            "sent_at": "2024-01-01T00:00:00Z"
+        }"#;
+        let resp: NotificationResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(resp.channel, NotificationChannel::Webhook);
+        assert_eq!(resp.status, "sent");
+        assert_eq!(resp.response_code, Some(200));
+    }
+
+    #[test]
+    fn test_evidence_response_deserialization() {
+        let json = r#"{
+            "id": "550e8400-e29b-41d4-a716-446655440000",
+            "incident_id": "550e8400-e29b-41d4-a716-446655440001",
+            "file_name": "frame.jpg",
+            "content_type": "image/jpeg",
+            "file_size": 1024,
+            "sha256": "abc123",
+            "width": 640,
+            "height": 480,
+            "created_at": "2024-01-01T00:00:00Z"
+        }"#;
+        let resp: EvidenceResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(resp.sha256, "abc123");
+        assert_eq!(resp.width, Some(640));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
